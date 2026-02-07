@@ -1,0 +1,14 @@
+[project]
+name = "casl"
+version = "0.1.0"
+description = "CASL Course Document Generator - Extract data from Excel and generate Word/Markdown documents"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.34.0",
+    "openpyxl>=3.1.0",
+    "python-docx>=1.1.0",
+    "python-multipart>=0.0.18",
+    "streamlit>=1.40.0",
+]
