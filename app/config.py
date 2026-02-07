@@ -1,7 +1,3 @@
-from pathlib import Path
-
-OUTPUT_DIR = Path("output")
-
 # Sheet names
 SHEET_PARTICULARS = "1 - Course Particulars"
 SHEET_BACKGROUND = "2 - Background"

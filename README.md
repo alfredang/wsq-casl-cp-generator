@@ -26,7 +26,6 @@ Upload a course planning Excel workbook and instantly generate:
 
 - **Python 3.13** with **uv** for package management
 - **Streamlit** -- Interactive web UI with upload, preview, and download
-- **FastAPI** -- REST API backend
 - **openpyxl** -- Excel file parsing
 - **python-docx** -- Word document generation
 
@@ -47,41 +46,25 @@ cd casl-generator
 # Install dependencies
 uv sync
 
-# Run the Streamlit app
+# Run the app
 uv run streamlit run streamlit_app.py
 ```
 
 Open **http://localhost:8501** in your browser.
 
-### Alternative: FastAPI Server
-
-```bash
-uv run uvicorn main:app --reload --port 8000
-```
-
-Open **http://localhost:8000** for the upload page, or use the API directly:
-
-```bash
-curl -X POST -F "file=@your_course.xlsx" http://localhost:8000/api/generate
-```
-
 ## Project Structure
 
 ```
 casl-generator/
-├── streamlit_app.py           # Streamlit web UI
-├── main.py                    # FastAPI entry point
+├── streamlit_app.py              # Streamlit web UI
 ├── app/
-│   ├── config.py              # Excel cell reference mappings
-│   ├── models.py              # Pydantic data models
-│   ├── extractor.py           # Excel data extraction
-│   ├── generator_docx.py      # Course Document generation
-│   ├── generator_lesson_plan.py  # Lesson Plan generation
-│   ├── generator_md.py        # Markdown generation
-│   └── routes.py              # FastAPI API endpoints
-├── static/                    # FastAPI frontend assets
-├── pyproject.toml             # Project config & dependencies
-└── uv.lock                    # Locked dependencies
+│   ├── config.py                 # Excel cell reference mappings
+│   ├── models.py                 # Pydantic data models
+│   ├── extractor.py              # Excel data extraction
+│   ├── generator_docx.py         # Course Document generation
+│   └── generator_lesson_plan.py  # Lesson Plan generation
+├── pyproject.toml                # Project config & dependencies
+└── uv.lock                       # Locked dependencies
 ```
 
 ## License
