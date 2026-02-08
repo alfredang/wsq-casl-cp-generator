@@ -474,6 +474,56 @@ def generate_minimum_entry_requirement(
     )
 
 
+LEARNING_OUTCOME_PROMPT_TEMPLATE = """\
+You are an expert instructional designer for professional training and \
+continuing education programmes. Generate learning outcomes for each \
+topic of the following course.
+
+Course Title: {course_title}
+
+Course Topics:
+{course_topics}
+
+Guidelines:
+- Generate exactly ONE learning outcome for EACH topic
+- Each learning outcome MUST summarise the entire topic — it should capture \
+the overall knowledge and skills covered in that topic in a single sentence
+- Each learning outcome MUST start with an action verb (e.g., Apply, Analyse, \
+Demonstrate, Evaluate, Design, Implement, Interpret, Develop, Execute, \
+Monitor, Assess, Explain, Describe, Identify, Recognise, Differentiate)
+- Each learning outcome MUST be less than 25 words
+- Learning outcomes should be specific, measurable, and achievable
+- Number topics as T1, T2, T3, etc.
+- Number learning outcomes to match: T1 gets LO1, T2 gets LO2, etc.
+- Use the exact format shown in the example below
+
+Example:
+
+T1: Business Innovation in the Age of Agentic AI
+LO1: Explain core AI-driven business innovation concepts, Agentic AI characteristics, industry applications, and emerging opportunities for transformation.
+
+T2: Agentic Vibe Coding for Business Innovation
+LO2: Apply intent-driven coding approaches to design, build, and evaluate agentic solutions using low-code and no-code platforms.
+
+T3: Agentic Workflow Design for Business Processes
+LO3: Design agentic workflows by differentiating agent architectures, coordinating multi-agent collaboration, and integrating human-AI models.
+
+T4: Building an Agentic AI Workforce
+LO4: Develop an Agentic AI workforce strategy covering role-based design, team scaling, and performance monitoring approaches.
+
+Respond with ONLY the formatted topics and learning outcomes, nothing else."""
+
+
+def generate_learning_outcomes(
+    course_title: str, course_topics: str, prompt_template: str | None = None
+) -> str:
+    """Generate learning outcomes for each topic using the Claude Agent SDK."""
+    template = prompt_template or LEARNING_OUTCOME_PROMPT_TEMPLATE
+    return asyncio.run(
+        _generate_async(template, course_title=course_title, course_topics=course_topics)
+    )
+
+
 COURSE_TOPICS_PROMPT_TEMPLATE = """\
 You are an expert curriculum designer for professional training and \
 continuing education programmes. Generate a structured list of course \

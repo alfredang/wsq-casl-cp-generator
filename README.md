@@ -16,7 +16,8 @@ Enter a course title and topics, then generate professional content for each CP 
 - **What You'll Learn** -- Bullet-point learning outcomes
 - **Background Part A** -- Targeted sectors, audience, and training needs
 - **Background Part B** -- Performance gaps, identification methods, and learner benefits
-- **Instruction Methods** -- Elaboration on appropriateness of each selected method
+- **Learning Outcomes** -- One learning outcome per topic (T1/LO1 format)
+- **Instructional Methods** -- Elaboration on appropriateness of each selected method
 - **Assessment Methods** -- Elaboration on appropriateness of each selected assessment
 
 ### Submit CP
@@ -30,8 +31,10 @@ Enter a course title and topics, then generate professional content for each CP 
 
 Configure course parameters used across all sections:
 
+- CASL/WSQ mode selector with mode-specific fields (Unique Skill Name for CASL, TSC Reference Code/Title for WSQ)
 - Course duration, number of topics, instructional/assessment hours
-- Select instruction methods (19 options) and assessment methods (11 options)
+- Select instructional methods (19 options) and assessment methods (11 options)
+- AI-powered course topic generation
 - Auto-calculated duration per topic, per method
 
 ## Tech Stack

@@ -11,6 +11,7 @@ from app.ai_generator import (
     BACKGROUND_PART_B_PROMPT_TEMPLATE,
     COURSE_TOPICS_PROMPT_TEMPLATE,
     INSTRUCTION_METHOD_PROMPT_TEMPLATE,
+    LEARNING_OUTCOME_PROMPT_TEMPLATE,
     INSTRUCTION_METHODS_LIST,
     UNIQUE_SKILL_NAMES_LIST,
     JOB_ROLES_PROMPT_TEMPLATE,
@@ -22,6 +23,7 @@ from app.ai_generator import (
     generate_background_part_b,
     generate_course_topics,
     generate_instruction_method,
+    generate_learning_outcomes,
     generate_job_roles,
     generate_minimum_entry_requirement,
     generate_what_youll_learn,
@@ -63,9 +65,13 @@ with st.sidebar:
                  type="primary" if st.session_state["active_page"] == "Background Part B" else "secondary"):
         st.session_state["active_page"] = "Background Part B"
         st.rerun()
-    if st.button("Instruction Methods", use_container_width=True,
-                 type="primary" if st.session_state["active_page"] == "Instruction Methods" else "secondary"):
-        st.session_state["active_page"] = "Instruction Methods"
+    if st.button("Learning Outcomes", use_container_width=True,
+                 type="primary" if st.session_state["active_page"] == "Learning Outcomes" else "secondary"):
+        st.session_state["active_page"] = "Learning Outcomes"
+        st.rerun()
+    if st.button("Instructional Methods", use_container_width=True,
+                 type="primary" if st.session_state["active_page"] == "Instructional Methods" else "secondary"):
+        st.session_state["active_page"] = "Instructional Methods"
         st.rerun()
     if st.button("Assessment Methods", use_container_width=True,
                  type="primary" if st.session_state["active_page"] == "Assessment Methods" else "secondary"):
@@ -186,7 +192,7 @@ if active_page == "Course Details":
         key="cd_course_topics",
     )
     if course_topics:
-        with st.expander("Preview", expanded=True):
+        with st.expander("Preview", expanded=False):
             st.markdown(course_topics)
 
     # --- Rest of settings in form ---
@@ -224,7 +230,7 @@ if active_page == "Course Details":
         col_num_instr, col_num_assess = st.columns(2)
         with col_num_instr:
             num_instr_methods = st.number_input(
-                "No. of Instruction Methods",
+                "No. of Instructional Methods",
                 min_value=1,
                 value=st.session_state.get("saved_num_instr_methods", 3),
                 step=1,
@@ -237,7 +243,7 @@ if active_page == "Course Details":
                 step=1,
             )
         selected_instr_methods = st.multiselect(
-            "Select Instruction Methods",
+            "Select Instructional Methods",
             options=INSTRUCTION_METHODS_LIST,
             default=st.session_state.get("saved_instr_methods", [
                 "Interactive presentation", "Discussions", "Case studies",
@@ -301,10 +307,9 @@ if active_page == "Course Details":
                 "Duration per Topic",
                 "Instructional Duration",
                 "Instructional per Topic",
-                "No. of Instruction Methods",
-                "Duration per Instruction Method",
+                "No. of Instructional Methods",
+                "Duration per Instructional Method",
                 "Assessment Duration",
-                "Assessment per Topic",
                 "No. of Assessment Methods",
                 "Duration per Assessment Method",
             ],
@@ -317,7 +322,6 @@ if active_page == "Course Details":
                 str(saved_num_instr),
                 f"{instr_per_method:.0f} mins",
                 f"{saved_assess} hrs",
-                f"{assess_per_topic:.0f} mins",
                 str(saved_num_assess),
                 f"{assess_per_method:.0f} mins",
             ],
@@ -566,10 +570,70 @@ elif active_page == "Background Part B":
             st.code(st.session_state["bgb_text"], language=None, wrap_lines=True)
 
 # ============================================================
-# PAGE: Instruction Methods
+# PAGE: Learning Outcomes
 # ============================================================
-elif active_page == "Instruction Methods":
-    st.header("Instruction Methods")
+elif active_page == "Learning Outcomes":
+    st.header("Learning Outcomes")
+
+    if not has_course_details:
+        st.warning("Please enter course details first on the **Course Details** page.")
+    else:
+        st.info(f"**Course:** {saved_title}")
+        st.markdown(
+            "AI will generate learning outcomes for each topic. "
+            "Each outcome starts with an action verb and is under 25 words."
+        )
+
+        # --- Editable prompt template ---
+        with st.expander("Prompt Template", expanded=False):
+            lo_prompt = st.text_area(
+                "Edit the prompt template used for generation. "
+                "Use `{course_title}` and `{course_topics}` as placeholders.",
+                value=st.session_state.get("lo_prompt", LEARNING_OUTCOME_PROMPT_TEMPLATE),
+                height=300,
+                key="lo_prompt_input",
+            )
+            st.session_state["lo_prompt"] = lo_prompt
+
+        # --- Generate Buttons ---
+        col_gen, col_regen = st.columns([1, 1])
+        with col_gen:
+            lo_generate = st.button(
+                "Generate",
+                type="primary",
+                use_container_width=True,
+                key="lo_gen",
+            )
+        with col_regen:
+            lo_regenerate = st.button(
+                "Regenerate",
+                use_container_width=True,
+                key="lo_regen",
+            )
+
+        # --- Generation Logic ---
+        if lo_generate or lo_regenerate:
+            with st.spinner("Generating learning outcomes..."):
+                try:
+                    result = generate_learning_outcomes(
+                        saved_title, saved_topics,
+                        prompt_template=st.session_state.get("lo_prompt"),
+                    )
+                    st.session_state["lo_text"] = result
+                except Exception as e:
+                    st.error(f"Failed to generate text: {e}")
+
+        # --- Display Result ---
+        if st.session_state.get("lo_text"):
+            st.divider()
+            st.markdown("**Generated Learning Outcomes:**")
+            st.code(st.session_state["lo_text"], language=None, wrap_lines=True)
+
+# ============================================================
+# PAGE: Instructional Methods
+# ============================================================
+elif active_page == "Instructional Methods":
+    st.header("Instructional Methods")
 
     if not has_course_details:
         st.warning("Please enter course details first on the **Course Details** page.")
@@ -971,7 +1035,7 @@ elif active_page == "Lesson Plan":
                 ]
                 st.dataframe(lo_rows, use_container_width=True, hide_index=True)
 
-                st.markdown("**Instruction Methods**")
+                st.markdown("**Instructional Methods**")
                 meth_rows = [
                     {
                         "Day": im.day,
