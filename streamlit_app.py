@@ -11,12 +11,16 @@ from app.ai_generator import (
     BACKGROUND_PART_B_PROMPT_TEMPLATE,
     INSTRUCTION_METHOD_PROMPT_TEMPLATE,
     INSTRUCTION_METHODS_LIST,
+    JOB_ROLES_PROMPT_TEMPLATE,
+    MINIMUM_ENTRY_REQUIREMENT_PROMPT_TEMPLATE,
     WHAT_YOULL_LEARN_PROMPT_TEMPLATE,
     generate_about_course,
     generate_assessment_method,
     generate_background_part_a,
     generate_background_part_b,
     generate_instruction_method,
+    generate_job_roles,
+    generate_minimum_entry_requirement,
     generate_what_youll_learn,
 )
 from app.extractor import extract_data
@@ -65,6 +69,18 @@ with st.sidebar:
 
     st.markdown("---")
     st.caption("SUBMIT CP")
+    if st.button("Entry Requirement", use_container_width=True,
+                 type="primary" if st.session_state["active_page"] == "Entry Requirement" else "secondary"):
+        st.session_state["active_page"] = "Entry Requirement"
+        st.rerun()
+    if st.button("Job Roles", use_container_width=True,
+                 type="primary" if st.session_state["active_page"] == "Job Roles" else "secondary"):
+        st.session_state["active_page"] = "Job Roles"
+        st.rerun()
+    if st.button("Course Outline", use_container_width=True,
+                 type="primary" if st.session_state["active_page"] == "Course Outline" else "secondary"):
+        st.session_state["active_page"] = "Course Outline"
+        st.rerun()
     if st.button("Lesson Plan", use_container_width=True,
                  type="primary" if st.session_state["active_page"] == "Lesson Plan" else "secondary"):
         st.session_state["active_page"] = "Lesson Plan"
@@ -104,14 +120,14 @@ if active_page == "Course Details":
             course_duration = st.number_input(
                 "Course Duration (hrs)",
                 min_value=1,
-                value=st.session_state.get("saved_course_duration", 8),
+                value=st.session_state.get("saved_course_duration", 16),
                 step=1,
             )
         with col_topics:
             num_topics = st.number_input(
-                "# of Topics",
+                "No. of Topics",
                 min_value=1,
-                value=st.session_state.get("saved_num_topics", 3),
+                value=st.session_state.get("saved_num_topics", 4),
                 step=1,
             )
         col_instr, col_assess = st.columns(2)
@@ -119,35 +135,37 @@ if active_page == "Course Details":
             instructional_duration = st.number_input(
                 "Instructional Duration (hrs)",
                 min_value=1,
-                value=st.session_state.get("saved_instructional_duration", 7),
+                value=st.session_state.get("saved_instructional_duration", 14),
                 step=1,
             )
         with col_assess:
             assessment_duration = st.number_input(
                 "Assessment Duration (hrs)",
                 min_value=1,
-                value=st.session_state.get("saved_assessment_duration", 1),
+                value=st.session_state.get("saved_assessment_duration", 2),
                 step=1,
             )
         col_num_instr, col_num_assess = st.columns(2)
         with col_num_instr:
             num_instr_methods = st.number_input(
-                "# of Instruction Methods",
+                "No. of Instruction Methods",
                 min_value=1,
                 value=st.session_state.get("saved_num_instr_methods", 3),
                 step=1,
             )
         with col_num_assess:
             num_assess_methods = st.number_input(
-                "# of Assessment Methods",
+                "No. of Assessment Methods",
                 min_value=1,
-                value=st.session_state.get("saved_num_assess_methods", 1),
+                value=st.session_state.get("saved_num_assess_methods", 2),
                 step=1,
             )
         selected_instr_methods = st.multiselect(
             "Select Instruction Methods",
             options=INSTRUCTION_METHODS_LIST,
-            default=st.session_state.get("saved_instr_methods", []),
+            default=st.session_state.get("saved_instr_methods", [
+                "Interactive presentation", "Discussions", "Case studies",
+            ]),
         )
         selected_assess_methods = st.multiselect(
             "Select Assessment Methods",
@@ -200,11 +218,11 @@ if active_page == "Course Details":
                 "Duration per Topic",
                 "Instructional Duration",
                 "Instructional per Topic",
-                "# Instruction Methods",
+                "No. of Instruction Methods",
                 "Duration per Instruction Method",
                 "Assessment Duration",
                 "Assessment per Topic",
-                "# Assessment Methods",
+                "No. of Assessment Methods",
                 "Duration per Assessment Method",
             ],
             "Value": [
@@ -223,12 +241,6 @@ if active_page == "Course Details":
         }
         st.dataframe(summary_data, use_container_width=True, hide_index=True)
 
-        saved_im = st.session_state.get("saved_instr_methods", [])
-        saved_am = st.session_state.get("saved_assess_methods", [])
-        if saved_im:
-            st.markdown(f"**Instruction Methods:** {', '.join(saved_im)}")
-        if saved_am:
-            st.markdown(f"**Assessment Methods:** {', '.join(saved_am)}")
 
 # ============================================================
 # PAGE: About This Course
@@ -607,6 +619,164 @@ elif active_page == "Assessment Methods":
                 for method, text in st.session_state["am_results"].items():
                     st.markdown(f"### {method}")
                     st.code(text, language=None, wrap_lines=True)
+
+# ============================================================
+# PAGE: Entry Requirement
+# ============================================================
+elif active_page == "Entry Requirement":
+    st.header("Minimum Entry Requirement")
+
+    if not has_course_details:
+        st.warning("Please enter course details first on the **Course Details** page.")
+    else:
+        st.info(f"**Course:** {saved_title}")
+        st.markdown(
+            "AI will generate minimum entry requirements covering knowledge and skills, "
+            "attitude, experience, and target age group."
+        )
+
+        # --- Editable prompt template ---
+        with st.expander("Prompt Template", expanded=False):
+            mer_prompt = st.text_area(
+                "Edit the prompt template used for generation. "
+                "Use `{course_title}` and `{course_topics}` as placeholders.",
+                value=st.session_state.get("mer_prompt", MINIMUM_ENTRY_REQUIREMENT_PROMPT_TEMPLATE),
+                height=300,
+                key="mer_prompt_input",
+            )
+            st.session_state["mer_prompt"] = mer_prompt
+
+        # --- Generate Buttons ---
+        col_gen, col_regen = st.columns([1, 1])
+        with col_gen:
+            mer_generate = st.button(
+                "Generate",
+                type="primary",
+                use_container_width=True,
+                key="mer_gen",
+            )
+        with col_regen:
+            mer_regenerate = st.button(
+                "Regenerate",
+                use_container_width=True,
+                key="mer_regen",
+            )
+
+        # --- Generation Logic ---
+        if mer_generate or mer_regenerate:
+            with st.spinner("Generating entry requirements..."):
+                try:
+                    result = generate_minimum_entry_requirement(
+                        saved_title, saved_topics,
+                        prompt_template=st.session_state.get("mer_prompt"),
+                    )
+                    st.session_state["mer_text"] = result
+                except Exception as e:
+                    st.error(f"Failed to generate text: {e}")
+
+        # --- Display Result ---
+        if st.session_state.get("mer_text"):
+            st.divider()
+            st.markdown("**Generated \"Minimum Entry Requirement\" Text:**")
+            st.code(st.session_state["mer_text"], language=None, wrap_lines=True)
+
+# ============================================================
+# PAGE: Job Roles
+# ============================================================
+elif active_page == "Job Roles":
+    st.header("Job Roles")
+
+    if not has_course_details:
+        st.warning("Please enter course details first on the **Course Details** page.")
+    else:
+        st.info(f"**Course:** {saved_title}")
+        st.markdown(
+            "AI will generate 3 relevant job roles for the course, "
+            "following SSG Skills Framework / MySkillsFuture Jobs-Skills Portal naming."
+        )
+
+        # --- Editable prompt template ---
+        with st.expander("Prompt Template", expanded=False):
+            jr_prompt = st.text_area(
+                "Edit the prompt template used for generation. "
+                "Use `{course_title}` and `{course_topics}` as placeholders.",
+                value=st.session_state.get("jr_prompt", JOB_ROLES_PROMPT_TEMPLATE),
+                height=300,
+                key="jr_prompt_input",
+            )
+            st.session_state["jr_prompt"] = jr_prompt
+
+        # --- Generate Buttons ---
+        col_gen, col_regen = st.columns([1, 1])
+        with col_gen:
+            jr_generate = st.button(
+                "Generate",
+                type="primary",
+                use_container_width=True,
+                key="jr_gen",
+            )
+        with col_regen:
+            jr_regenerate = st.button(
+                "Regenerate",
+                use_container_width=True,
+                key="jr_regen",
+            )
+
+        # --- Generation Logic ---
+        if jr_generate or jr_regenerate:
+            with st.spinner("Generating job roles..."):
+                try:
+                    result = generate_job_roles(
+                        saved_title, saved_topics,
+                        prompt_template=st.session_state.get("jr_prompt"),
+                    )
+                    st.session_state["jr_text"] = result
+                except Exception as e:
+                    st.error(f"Failed to generate text: {e}")
+
+        # --- Display Result ---
+        if st.session_state.get("jr_text"):
+            st.divider()
+            st.markdown("**Generated Job Roles:**")
+            st.code(st.session_state["jr_text"], language=None, wrap_lines=True)
+
+# ============================================================
+# PAGE: Course Outline
+# ============================================================
+elif active_page == "Course Outline":
+    st.header("Course Outline")
+
+    if not has_course_details:
+        st.warning("Please enter course details first on the **Course Details** page.")
+    else:
+        st.info(f"**Course:** {saved_title}")
+
+        saved_duration = st.session_state.get("saved_course_duration", 16)
+        saved_num_topics = st.session_state.get("saved_num_topics", 4)
+        duration_per_topic = saved_duration * 60 / saved_num_topics
+        all_topics = [t.strip() for t in saved_topics.split(",") if t.strip()]
+        main_topics = all_topics[:saved_num_topics]
+        saved_im = st.session_state.get("saved_instr_methods", [])
+
+        info_lines = []
+        if main_topics:
+            info_lines.append("(1) The list of topics covered in this course")
+            for i, topic in enumerate(main_topics, 1):
+                info_lines.append(f"Topic {i}: {topic}")
+
+        if saved_im:
+            info_lines.append("")
+            info_lines.append("(2) Instructional methods")
+            info_lines.append(", ".join(saved_im))
+
+        if main_topics:
+            info_lines.append("")
+            info_lines.append("(3) Duration for each topic")
+            for i, topic in enumerate(main_topics, 1):
+                info_lines.append(f"Topic {i}: {duration_per_topic:.0f}mins")
+
+        if info_lines:
+            st.code("\n".join(info_lines), language=None, wrap_lines=True)
 
 # ============================================================
 # PAGE: Lesson Plan

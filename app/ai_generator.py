@@ -20,14 +20,15 @@ Guidelines:
 professional needs the course addresses
 - Explain industry relevance and career impact (employment opportunities, job \
 upgrading, professional development)
-- Indicate the appropriate learner level (beginner, intermediate, or advanced) \
-based on the topics
+- The target learner level is generally beginner to intermediate; reflect this \
+in the description
 - Keep the tone professional, engaging, and encouraging
 - Write exactly ONE cohesive paragraph of 80-120 words
 - Do NOT use bullet points, numbered lists, or headings
 - Do NOT include the course title in the opening words; weave it in naturally \
 or refer to "this course"
 - Do NOT use markdown formatting
+- IMPORTANT: The entire response must NOT exceed 2000 characters
 
 Examples:
 
@@ -421,6 +422,102 @@ assessment across all learners.
 Respond with ONLY the paragraph text, nothing else."""
 
 
+MINIMUM_ENTRY_REQUIREMENT_PROMPT_TEMPLATE = """\
+You are an expert course description writer for professional training and \
+continuing education programmes. Write a "Minimum Entry Requirement" section \
+for the following course.
+
+Course Title: {course_title}
+
+Course Topics:
+{course_topics}
+
+Guidelines:
+- Structure the output into these categories: Knowledge and Skills, Attitude, \
+Experience, and Target Age Group
+- Under Knowledge and Skills: state educational qualifications (e.g., GCE 'O' \
+Levels, diploma, degree) and any language proficiency requirements
+- Under Attitude: describe the learning attitude expected of participants
+- Under Experience: state the minimum years of working experience required
+- Include a target age group (typically 21-65 years old)
+- Use bullet points with a bullet character (•) for each requirement
+- The target learner level is generally beginner to intermediate
+- Write in a professional, factual tone suitable for a course proposal document
+- Do NOT use markdown formatting or headings
+- IMPORTANT: The entire response must NOT exceed 2000 characters
+
+Examples:
+
+Example 1:
+Knowledge and Skills
+• Able to operate using computer functions
+• Minimum 3 GCE 'O' Levels Passes including English or WPL Level 5 \
+(Average of Reading, Listening, Speaking & Writing Scores)
+Attitude
+• Positive Learning Attitude
+• Enthusiastic Learner
+Experience
+• Minimum of 1 year of working experience
+
+Target age group: 21-65 years old
+
+Respond with ONLY the text, nothing else."""
+
+
+def generate_minimum_entry_requirement(
+    course_title: str, course_topics: str, prompt_template: str | None = None
+) -> str:
+    """Generate a 'Minimum Entry Requirement' section using the Claude Agent SDK."""
+    template = prompt_template or MINIMUM_ENTRY_REQUIREMENT_PROMPT_TEMPLATE
+    return asyncio.run(
+        _generate_async(template, course_title=course_title, course_topics=course_topics)
+    )
+
+
+JOB_ROLES_PROMPT_TEMPLATE = """\
+You are an expert in Singapore's workforce development ecosystem. Generate \
+3 relevant job roles for the following course. The job role names must follow \
+the naming conventions used on the SSG Skills Framework and MySkillsFuture \
+Jobs-Skills Portal.
+
+Course Title: {course_title}
+
+Course Topics:
+{course_topics}
+
+Guidelines:
+- Generate exactly 3 job roles that are directly relevant to the course content
+- Each job role name MUST follow the official naming used on the SSG \
+Skills Framework / MySkillsFuture Jobs-Skills Portal
+- Use the standard format: Job Title / Designation (e.g., "Marketing Manager", \
+"Business Development Executive", "Digital Marketing Specialist")
+- For each job role, provide a brief 1-2 sentence description of how the \
+course is relevant to that role
+- Present in this format:
+  1. [Job Role Name]
+  [Brief description of relevance]
+
+  2. [Job Role Name]
+  [Brief description of relevance]
+
+  3. [Job Role Name]
+  [Brief description of relevance]
+- Do NOT use markdown formatting
+- IMPORTANT: The entire response must NOT exceed 2000 characters
+
+Respond with ONLY the numbered job roles and descriptions, nothing else."""
+
+
+def generate_job_roles(
+    course_title: str, course_topics: str, prompt_template: str | None = None
+) -> str:
+    """Generate job roles following SSG Skills Jobs portal naming."""
+    template = prompt_template or JOB_ROLES_PROMPT_TEMPLATE
+    return asyncio.run(
+        _generate_async(template, course_title=course_title, course_topics=course_topics)
+    )
+
+
 INSTRUCTION_METHODS_LIST = [
     "Brainstorming",
     "Case studies",
@@ -444,17 +541,17 @@ INSTRUCTION_METHODS_LIST = [
 ]
 
 ASSESSMENT_METHODS_LIST = [
-    "Explicit teaching (Lecture) & Homework",
-    "Field trips",
-    "Games",
-    "Independent reading",
-    "Interactive presentation",
-    "Peer teaching / Peer practice",
-    "Problem solving",
-    "Reflection",
-    "Role-play",
-    "Simulations",
-    "Others",
+    "Written Exam",
+    "Online Test",
+    "Project",
+    "Assignments",
+    "Oral Interview",
+    "Demonstration",
+    "Practical Exam",
+    "Role Play",
+    "Oral Questioning",
+    "Others: Case Studies",
+    "Others: Reflection",
 ]
 
 
