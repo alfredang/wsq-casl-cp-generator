@@ -456,7 +456,7 @@ Course Title: {course_title}
 
 Course Topics:
 {course_topics}
-
+{special_requirements}
 Guidelines:
 - Structure the output into these categories: Knowledge and Skills, Attitude, \
 Experience, and Target Age Group
@@ -490,12 +490,27 @@ Respond with ONLY the text, nothing else."""
 
 
 def generate_minimum_entry_requirement(
-    course_title: str, course_topics: str, prompt_template: str | None = None
+    course_title: str,
+    course_topics: str,
+    prompt_template: str | None = None,
+    special_requirements: str = "",
 ) -> str:
     """Generate a 'Minimum Entry Requirement' section using the Claude Agent SDK."""
     template = prompt_template or MINIMUM_ENTRY_REQUIREMENT_PROMPT_TEMPLATE
+    if special_requirements.strip():
+        special_req_text = (
+            f"\nSpecial Requirements (MUST be reflected in the entry requirements):\n"
+            f"{special_requirements.strip()}\n"
+        )
+    else:
+        special_req_text = ""
     return asyncio.run(
-        _generate_async(template, course_title=course_title, course_topics=course_topics)
+        _generate_async(
+            template,
+            course_title=course_title,
+            course_topics=course_topics,
+            special_requirements=special_req_text,
+        )
     )
 
 

@@ -826,11 +826,19 @@ elif active_page == "Min Entry Requirements":
             "attitude, experience, and target age group."
         )
 
+        mer_special_req = st.text_area(
+            "Special Requirements (optional)",
+            value="",
+            height=80,
+            key="mer_special_req",
+            placeholder="e.g. Participants must have basic IT skills, minimum diploma in relevant field, etc.",
+        )
+
         # --- Editable prompt template ---
         with st.expander("Prompt Template", expanded=False):
             mer_prompt = st.text_area(
                 "Edit the prompt template used for generation. "
-                "Use `{course_title}` and `{course_topics}` as placeholders.",
+                "Use `{course_title}`, `{course_topics}`, and `{special_requirements}` as placeholders.",
                 value=st.session_state.get("mer_prompt", MINIMUM_ENTRY_REQUIREMENT_PROMPT_TEMPLATE),
                 height=300,
                 key="mer_prompt_input",
@@ -860,6 +868,7 @@ elif active_page == "Min Entry Requirements":
                     result = generate_minimum_entry_requirement(
                         saved_title, saved_topics,
                         prompt_template=st.session_state.get("mer_prompt"),
+                        special_requirements=mer_special_req,
                     )
                     st.session_state["mer_text"] = result
                 except Exception as e:
