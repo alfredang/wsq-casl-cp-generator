@@ -11,6 +11,7 @@ from app.ai_generator import (
     BACKGROUND_PART_A_PROMPT_TEMPLATE,
     BACKGROUND_PART_B_PROMPT_TEMPLATE,
     COURSE_TITLE_SUGGESTIONS_PROMPT_TEMPLATE,
+    COURSE_OUTLINE_PROMPT_TEMPLATE,
     COURSE_TOPICS_PROMPT_TEMPLATE,
     COURSE_VALIDATION_PROMPT_TEMPLATE,
     INSTRUCTION_METHOD_PROMPT_TEMPLATE,
@@ -29,11 +30,13 @@ from app.ai_generator import (
     generate_background_part_a,
     generate_background_part_b,
     generate_course_title_suggestions,
+    generate_course_outline,
     generate_course_topics,
     generate_course_validation,
     generate_instruction_method,
     generate_learning_outcomes,
     generate_lesson_plan_content,
+    parse_ai_lesson_plan,
     generate_lu_sequencing_rationale,
     generate_job_roles,
     generate_minimum_entry_requirement,
@@ -1028,8 +1031,41 @@ elif active_page == "Course Outline":
         st.warning("Please enter course details first on the **Course Details** page.")
     else:
         st.info(f"**Course:** {saved_title}")
+    st.markdown(
+        "Generate a detailed course outline covering topics, "
+        "instructional methods, and duration for each topic."
+    )
 
-    if st.button("Generate", type="primary", use_container_width=True, key="co_gen"):
+    # --- Editable prompt template ---
+    with st.expander("Prompt Template", expanded=False):
+        co_prompt = st.text_area(
+            "Edit the prompt template used for generation. "
+            "Use `{course_title}`, `{course_topics}`, `{instructional_methods}`, "
+            "and `{duration_per_topic}` as placeholders.",
+            value=st.session_state.get("co_prompt", COURSE_OUTLINE_PROMPT_TEMPLATE),
+            height=400,
+            key="co_prompt_input",
+        )
+        st.session_state["co_prompt"] = co_prompt
+
+    # --- Generate Buttons ---
+    col_gen, col_regen = st.columns([1, 1])
+    with col_gen:
+        co_generate_clicked = st.button(
+            "Generate",
+            type="primary",
+            use_container_width=True,
+            key="co_gen",
+        )
+    with col_regen:
+        co_regenerate_clicked = st.button(
+            "Regenerate",
+            use_container_width=True,
+            key="co_regen",
+        )
+
+    # --- Generation Logic ---
+    if co_generate_clicked or co_regenerate_clicked:
         if not has_course_details:
             st.warning("Please enter course details first on the **Course Details** page.")
         else:
@@ -1037,30 +1073,24 @@ elif active_page == "Course Outline":
             saved_num_topics = st.session_state.get("saved_num_topics", 4)
             duration_per_topic = saved_duration * 60 / saved_num_topics
             saved_im = st.session_state.get("saved_instr_methods", [])
-            main_topics = re.findall(r"^##\s*Topic\s*\d+:\s*(.+)$", saved_topics, re.MULTILINE)
 
-            info_lines = []
-            if main_topics:
-                info_lines.append("(1) The list of topics covered in this course")
-                for i, topic in enumerate(main_topics, 1):
-                    info_lines.append(f"T{i}: {topic}")
-
-            if saved_im:
-                info_lines.append("")
-                info_lines.append("(2) Instructional methods")
-                info_lines.append(", ".join(saved_im))
-
-            if main_topics:
-                info_lines.append("")
-                info_lines.append("(3) Duration for each topic")
-                for i, topic in enumerate(main_topics, 1):
-                    info_lines.append(f"Topic {i}: {duration_per_topic:.0f}mins")
-
-            st.session_state["co_text"] = "\n".join(info_lines)
+            with st.spinner("Generating course outline..."):
+                try:
+                    result = generate_course_outline(
+                        saved_title,
+                        saved_topics,
+                        ", ".join(saved_im),
+                        f"{duration_per_topic:.0f}",
+                        prompt_template=st.session_state.get("co_prompt"),
+                    )
+                    st.session_state["co_text"] = result
+                except Exception as e:
+                    st.error(f"Failed to generate course outline: {e}")
 
     # --- Display Result ---
     if st.session_state.get("co_text"):
         st.divider()
+        st.markdown("**Generated Course Outline:**")
         st.code(st.session_state["co_text"], language=None, wrap_lines=True)
 
 # ============================================================
@@ -1117,187 +1147,8 @@ elif active_page == "Lesson Plan":
             lp_im = st.session_state.get("saved_instr_methods", [])
             lp_am = st.session_state.get("saved_assess_methods", [])
 
-            main_topics = re.findall(r"^##\s*Topic\s*\d+:\s*(.+)$", saved_topics, re.MULTILINE)
-            num_topics = len(main_topics) if main_topics else lp_num_topics
-            # --- Build schedule from course details ---
-            def _fmt_12h(mins: int) -> str:
-                h, m = divmod(mins, 60)
-                suffix = "AM" if h < 12 else "PM"
-                if h > 12:
-                    h -= 12
-                elif h == 0:
-                    h = 12
-                return f"{h}:{m:02d} {suffix}"
-
-            DAY_START = 9 * 60          # 9:00 AM
-            DAY_END = 18 * 60           # 6:00 PM
-            LUNCH_START = 12 * 60 + 30  # 12:30 PM
-            LUNCH_END = 13 * 60 + 15    # 1:15 PM
-            LUNCH_MINS = 45
-            MIN_SESSION = 15  # min topic session length to avoid tiny splits
-
-            num_days = max(1, lp_duration // 8)
-            instr_per_topic = (lp_instr_hrs * 60) // num_topics if num_topics else 0
-            assess_total_mins = lp_assess_hrs * 60
-            assess_start = DAY_END - assess_total_mins  # e.g. 4:00 PM
-
-            schedule: dict[int, list[dict]] = {}
-            topic_idx = 0
-            carry = 0  # minutes of current topic already scheduled
-
-            for day in range(1, num_days + 1):
-                rows: list[dict] = []
-                current = DAY_START
-                is_last_day = (day == num_days)
-                lunch_done = False
-
-                while topic_idx < num_topics:
-                    # --- Handle barriers first ---
-                    if not lunch_done and current >= LUNCH_START:
-                        rows.append({
-                            "timing": f"{_fmt_12h(LUNCH_START)} - {_fmt_12h(LUNCH_END)}",
-                            "duration": f"{LUNCH_MINS} mins",
-                            "description": "Lunch Break",
-                            "methods": "",
-                        })
-                        current = LUNCH_END
-                        lunch_done = True
-                        continue
-                    if is_last_day and current >= assess_start:
-                        break
-                    if current >= DAY_END:
-                        break
-
-                    # --- Determine next barrier ---
-                    if not lunch_done:
-                        barrier = LUNCH_START
-                    elif is_last_day:
-                        barrier = assess_start
-                    else:
-                        barrier = DAY_END
-
-                    avail = barrier - current
-                    topic_remaining = instr_per_topic - carry
-
-                    if avail < MIN_SESSION:
-                        if not lunch_done and barrier == LUNCH_START:
-                            # Start lunch early to avoid tiny break next to lunch
-                            lunch_end = current + LUNCH_MINS
-                            rows.append({
-                                "timing": f"{_fmt_12h(current)} - {_fmt_12h(lunch_end)}",
-                                "duration": f"{LUNCH_MINS} mins",
-                                "description": "Lunch Break",
-                                "methods": "",
-                            })
-                            current = lunch_end
-                            lunch_done = True
-                        else:
-                            # Insert break before other barriers (assessment, day-end)
-                            if avail > 0:
-                                rows.append({
-                                    "timing": f"{_fmt_12h(current)} - {_fmt_12h(barrier)}",
-                                    "duration": f"{avail} mins",
-                                    "description": "Break",
-                                    "methods": "",
-                                })
-                            current = barrier
-                        continue
-
-                    topic_name = main_topics[topic_idx] if topic_idx < len(main_topics) else f"Topic {topic_idx + 1}"
-                    label = f"T{topic_idx + 1}: {topic_name}"
-                    if carry > 0:
-                        label += " (Cont'd)"
-
-                    methods_str = ", ".join(lp_im) if lp_im else ""
-
-                    if topic_remaining <= avail:
-                        # Topic fits completely before barrier
-                        end = current + topic_remaining
-                        rows.append({
-                            "timing": f"{_fmt_12h(current)} - {_fmt_12h(end)}",
-                            "duration": f"{topic_remaining} mins",
-                            "description": label,
-                            "methods": methods_str,
-                        })
-                        current = end
-                        carry = 0
-                        topic_idx += 1
-                    else:
-                        # Split topic at barrier
-                        rows.append({
-                            "timing": f"{_fmt_12h(current)} - {_fmt_12h(barrier)}",
-                            "duration": f"{avail} mins",
-                            "description": label,
-                            "methods": methods_str,
-                        })
-                        carry += avail
-                        current = barrier
-
-                # --- Fill remaining day structure after topics ---
-                if not lunch_done:
-                    if current < LUNCH_START:
-                        gap = LUNCH_START - current
-                        if gap > 0:
-                            rows.append({
-                                "timing": f"{_fmt_12h(current)} - {_fmt_12h(LUNCH_START)}",
-                                "duration": f"{gap} mins",
-                                "description": "Break",
-                                "methods": "",
-                            })
-                        current = LUNCH_START
-                    rows.append({
-                        "timing": f"{_fmt_12h(LUNCH_START)} - {_fmt_12h(LUNCH_END)}",
-                        "duration": f"{LUNCH_MINS} mins",
-                        "description": "Lunch Break",
-                        "methods": "",
-                    })
-                    current = LUNCH_END
-                    lunch_done = True
-
-                if is_last_day and assess_total_mins > 0:
-                    if current < assess_start:
-                        gap = assess_start - current
-                        rows.append({
-                            "timing": f"{_fmt_12h(current)} - {_fmt_12h(assess_start)}",
-                            "duration": f"{gap} mins",
-                            "description": "Break",
-                            "methods": "",
-                        })
-                    rows.append({
-                        "timing": f"{_fmt_12h(assess_start)} - {_fmt_12h(DAY_END)}",
-                        "duration": f"{assess_total_mins} mins",
-                        "description": f"Assessment: {', '.join(lp_am)}",
-                        "methods": "",
-                    })
-
-                schedule[day] = rows
-
-            # --- Generate documents ---
-            with st.spinner("Generating lesson plan documents..."):
-                try:
-                    with tempfile.TemporaryDirectory() as tmp_dir:
-                        docx_path = Path(tmp_dir) / "lesson_plan.docx"
-                        generate_lesson_plan_table(
-                            saved_title, lp_duration, lp_instr_hrs, lp_assess_hrs,
-                            schedule, docx_path,
-                            instructional_methods=lp_im,
-                        )
-                        st.session_state["lp_docx_bytes"] = docx_path.read_bytes()
-
-                        pdf_path = Path(tmp_dir) / "lesson_plan.pdf"
-                        generate_lesson_plan_pdf_table(
-                            saved_title, lp_duration, lp_instr_hrs, lp_assess_hrs,
-                            schedule, pdf_path,
-                            instructional_methods=lp_im,
-                        )
-                        st.session_state["lp_pdf_bytes"] = pdf_path.read_bytes()
-
-                    st.session_state["lp_generated"] = True
-                except Exception as e:
-                    st.error(f"Failed to generate documents: {e}")
-
-            # --- AI generation ---
-            with st.spinner("Generating lesson plan text with AI..."):
+            # --- AI generation first ---
+            with st.spinner("Generating lesson plan with AI..."):
                 try:
                     result = generate_lesson_plan_content(
                         course_title=saved_title,
@@ -1312,6 +1163,36 @@ elif active_page == "Lesson Plan":
                     st.session_state["lp_text"] = result
                 except Exception as e:
                     st.error(f"Failed to generate AI lesson plan: {e}")
+
+            # --- Parse AI output into schedule for documents ---
+            if st.session_state.get("lp_text"):
+                schedule = parse_ai_lesson_plan(st.session_state["lp_text"])
+
+                if schedule:
+                    with st.spinner("Generating lesson plan documents..."):
+                        try:
+                            with tempfile.TemporaryDirectory() as tmp_dir:
+                                docx_path = Path(tmp_dir) / "lesson_plan.docx"
+                                generate_lesson_plan_table(
+                                    saved_title, lp_duration, lp_instr_hrs, lp_assess_hrs,
+                                    schedule, docx_path,
+                                    instructional_methods=lp_im,
+                                )
+                                st.session_state["lp_docx_bytes"] = docx_path.read_bytes()
+
+                                pdf_path = Path(tmp_dir) / "lesson_plan.pdf"
+                                generate_lesson_plan_pdf_table(
+                                    saved_title, lp_duration, lp_instr_hrs, lp_assess_hrs,
+                                    schedule, pdf_path,
+                                    instructional_methods=lp_im,
+                                )
+                                st.session_state["lp_pdf_bytes"] = pdf_path.read_bytes()
+
+                            st.session_state["lp_generated"] = True
+                        except Exception as e:
+                            st.error(f"Failed to generate documents: {e}")
+                else:
+                    st.warning("Could not parse the AI lesson plan into a schedule. Documents were not generated.")
 
     # --- Downloads ---
     if st.session_state.get("lp_generated"):

@@ -729,17 +729,18 @@ Assessment Methods: {assessment_methods}
 
 Guidelines:
 - Create a day-by-day lesson plan with time slots from 9:00 AM to 6:00 PM
-- Include a 1-hour lunch break (typically 1:00 PM - 2:00 PM)
-- Distribute all topics across the available training days
-- For each time slot, include:
-  - Time range (e.g. 9:00 AM - 10:30 AM)
-  - Topic/session name
-  - Key learning points (2-3 bullet points)
-  - Instructional method used for that session
-- Include assessment sessions on the last day (or spread across days \
-if assessment duration is significant)
+- Include a 45-minute lunch break at 12:30 PM - 1:15 PM each day
+- Each topic gets EQUAL time: {instructional_duration} hours * 60 / number of topics
+- Topics can split into 2 sessions across lunch or day boundaries (e.g. "T2 (Cont'd)")
+- Assessment: fixed at 4:00 PM - 6:00 PM on last day
+- Fill remaining time with breaks to fit exactly 9:00 AM - 6:00 PM
+- For each time slot, you MUST include ALL of these fields on separate lines:
+  1. Time range and topic name line: "9:00 AM - 10:30 AM | T1: Topic Name"
+  2. Duration line: "Duration: 90 mins"
+  3. Key learning points: 2-3 bullet points starting with •
+  4. Instructional method line: "Instructional Method: method name"
+- For Lunch Break and Break slots, only include the time range and name
 - Use plain text format with clear headers for each day
-- Use bullet points (•) for learning points within each session
 - Separate each day with a blank line
 - Do NOT use markdown formatting (no #, **, etc.)
 - IMPORTANT: Ensure all topics from the course are covered
@@ -748,37 +749,114 @@ Example format:
 
 Day 1 (9:00 AM - 6:00 PM)
 
-9:00 AM - 10:30 AM | Topic 1: Introduction to Business Innovation
+9:00 AM - 12:30 PM | T1: Introduction to Business Innovation
+Duration: 210 mins
 • Explain the evolution of business innovation
 • Describe key characteristics and applications
 • Identify opportunities for transformation
 Instructional Method: Interactive presentation
 
-10:30 AM - 12:30 PM | Topic 2: Agentic Vibe Coding
+12:30 PM - 1:15 PM | Lunch Break
+
+1:15 PM - 4:00 PM | T2: Agentic Vibe Coding
+Duration: 165 mins
 • Apply intent-driven coding approaches
 • Design agentic solutions using low-code platforms
-• Evaluate agent performance metrics
 Instructional Method: Demonstrations / Modelling
 
-12:30 PM - 1:30 PM | Lunch Break
+4:00 PM - 6:00 PM | T2: Agentic Vibe Coding (Cont'd)
+Duration: 120 mins
+• Evaluate agent performance metrics
+• Build and test agentic workflows
+Instructional Method: Demonstrations / Modelling
 
-1:30 PM - 3:30 PM | Topic 3: Workflow Design
+Day 2 (9:00 AM - 6:00 PM)
+
+9:00 AM - 12:30 PM | T3: Workflow Design
+Duration: 210 mins
 • Differentiate between agent architectures
 • Coordinate multi-agent collaboration
-• Integrate human-AI models
 Instructional Method: Case studies
 
-3:30 PM - 5:00 PM | Topic 4: Building AI Workforce
+12:30 PM - 1:15 PM | Lunch Break
+
+1:15 PM - 4:00 PM | T4: Building AI Workforce
+Duration: 165 mins
 • Explain role-based designs for AI workforce
 • Describe approaches to scaling agentic teams
-• Monitor AI workforce performance
 Instructional Method: Discussions
 
-5:00 PM - 6:00 PM | Assessment
-• Written Examination covering Day 1 topics
-Assessment Method: Written Exam
+4:00 PM - 6:00 PM | Assessment
+Duration: 120 mins
+• Written Examination covering all topics
 
 Respond with ONLY the lesson plan text, nothing else."""
+
+
+def parse_ai_lesson_plan(ai_text: str) -> dict[int, list[dict]]:
+    """Parse AI-generated lesson plan text into a schedule dict.
+
+    Returns {day_num: [{"timing": ..., "duration": ..., "description": ..., "methods": ...}, ...]}.
+    """
+    import re
+    schedule: dict[int, list[dict]] = {}
+    current_day = 0
+    current_entry: dict | None = None
+    rows: list[dict] = []
+
+    for line in ai_text.split("\n"):
+        line = line.strip()
+        if not line:
+            continue
+
+        # Match "Day N" header
+        day_match = re.match(r"Day\s+(\d+)", line)
+        if day_match:
+            if current_entry:
+                rows.append(current_entry)
+                current_entry = None
+            if current_day > 0:
+                schedule[current_day] = rows
+            current_day = int(day_match.group(1))
+            rows = []
+            continue
+
+        # Match time slot line: "9:00 AM - 10:30 AM | Description"
+        slot_match = re.match(
+            r"(\d{1,2}:\d{2}\s*(?:AM|PM))\s*-\s*(\d{1,2}:\d{2}\s*(?:AM|PM))\s*\|\s*(.+)",
+            line,
+        )
+        if slot_match:
+            if current_entry:
+                rows.append(current_entry)
+            current_entry = {
+                "timing": f"{slot_match.group(1)} - {slot_match.group(2)}",
+                "duration": "",
+                "description": slot_match.group(3).strip(),
+                "methods": "",
+            }
+            continue
+
+        if current_entry:
+            # Match "Duration: X mins"
+            dur_match = re.match(r"Duration:\s*(.+)", line)
+            if dur_match:
+                current_entry["duration"] = dur_match.group(1).strip()
+                continue
+
+            # Match "Instructional Method: ..."
+            method_match = re.match(r"Instructional Method:\s*(.+)", line)
+            if method_match:
+                current_entry["methods"] = method_match.group(1).strip()
+                continue
+
+    # Flush last entry and day
+    if current_entry:
+        rows.append(current_entry)
+    if current_day > 0:
+        schedule[current_day] = rows
+
+    return schedule
 
 
 def generate_lesson_plan_content(
@@ -861,6 +939,92 @@ def generate_course_title_suggestions(
     """Generate 20 course title suggestions using the Claude Agent SDK."""
     template = prompt_template or COURSE_TITLE_SUGGESTIONS_PROMPT_TEMPLATE
     return asyncio.run(_generate_async(template, course=course))
+
+
+_CONDENSE_TEMPLATE = """\
+The following text exceeds {char_limit} characters. Rewrite it to be under \
+{char_limit} characters while preserving the same structure and all key \
+information. Make descriptions shorter and more concise. Remove filler words. \
+Do NOT omit any topics, methods, or sections — just make each entry briefer.
+
+Text to condense:
+{text}"""
+
+
+COURSE_OUTLINE_PROMPT_TEMPLATE = """\
+You are an expert course developer for professional training programmes.
+Generate a detailed course outline for the following course.
+
+Course Title: {course_title}
+
+Course Topics:
+{course_topics}
+
+Instructional Methods: {instructional_methods}
+
+Duration per Topic: {duration_per_topic} minutes
+
+Guidelines:
+- Section (1): List all topics covered in this course, numbered as T1, T2, etc.
+  For each topic, provide a brief 1-2 sentence description of what the topic covers.
+- Section (2): List the instructional methods used in this course.
+  For each method, provide a brief 1-sentence explanation of how it is applied in the course.
+- Section (3): Show the duration allocated for each topic in minutes.
+  Present as a simple list with topic name and duration.
+- Keep the tone professional and concise
+- Do NOT use markdown formatting or headings
+- Use plain text with clear section labels
+- IMPORTANT: The entire response must NOT exceed 2000 characters
+
+Format your response exactly as follows:
+
+(1) The list of topics covered in this course
+T1: [Topic Name] - [Brief description]
+T2: [Topic Name] - [Brief description]
+...
+
+(2) Instructional methods
+[Method 1] - [How it is applied]
+[Method 2] - [How it is applied]
+...
+
+(3) Duration for each topic
+Topic 1: [duration]mins
+Topic 2: [duration]mins
+..."""
+
+
+def generate_course_outline(
+    course_title: str,
+    course_topics: str,
+    instructional_methods: str,
+    duration_per_topic: str,
+    prompt_template: str | None = None,
+) -> str:
+    """Generate a course outline using the Claude Agent SDK."""
+    template = prompt_template or COURSE_OUTLINE_PROMPT_TEMPLATE
+    result = asyncio.run(
+        _generate_async(
+            template,
+            course_title=course_title,
+            course_topics=course_topics,
+            instructional_methods=instructional_methods,
+            duration_per_topic=duration_per_topic,
+        )
+    )
+    # If output exceeds 2000 chars, ask AI to condense it
+    max_retries = 2
+    for _ in range(max_retries):
+        if len(result) <= 2000:
+            break
+        result = asyncio.run(
+            _generate_async(
+                _CONDENSE_TEMPLATE,
+                text=result,
+                char_limit="2000",
+            )
+        )
+    return result
 
 
 LU_SEQUENCING_TYPES = [
