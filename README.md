@@ -1,6 +1,6 @@
 # WSQ and CASL Course Proposal (CP) Generator
 
-A web application for preparing and submitting WSQ and CASL Course Proposal (CP) documents. Uses AI (Claude Agent SDK) to generate professional course content, build lesson plan schedules, and audit CP Excel submissions against saved course details.
+A web application for preparing and submitting WSQ and CASL Course Proposal (CP) documents. Uses AI (Claude Agent SDK) to generate professional course content, build lesson plan schedules, import existing CP Excel files, and audit CP submissions against saved course details.
 
 Built for training providers working with the WSQ and CASL (Course Accreditation and Standards for Learning) frameworks.
 
@@ -27,8 +27,12 @@ Enter a course title and topics, then generate professional content for each CP 
 - **Course Outline** -- Topics, instructional methods, and duration per topic
 - **Min Entry Requirements** -- Minimum entry requirements (knowledge, skills, attitude, experience) with optional special requirements
 - **Job Roles** -- 10 relevant job roles following SSG Skills Framework naming
-- **Lesson Plan** -- Auto-generated schedule with barrier algorithm (lunch, assessment, day-end splits), downloadable as Word (.docx) and PDF (.pdf) with 4-column table layout
+- **Lesson Plan** -- Two options: a deterministic **Simple Lesson Plan** (Time, Topics, Instructional Methods, Resources) with editable lesson/assessment hours (defaults to a one-day 7h lesson + 1h assessment), and an AI-generated lesson plan. Both downloadable as Word (.docx) and PDF (.pdf). The barrier algorithm keeps every day within 9:00 AM–6:00 PM (lunch, assessment, day-end splits), and PDF export is Unicode-safe (renders CJK and special characters)
 - **CP Quality Audit** -- Upload CP Excel to compare against saved course details, highlights mismatches, and generates downloadable audit report (.docx)
+
+### Import an Existing CP
+
+On the Course Details page, **Upload an existing CP Excel file to auto-fill every page** in one step — course title, topics, durations, methods, About, What You'll Learn, Background A/B, and the instruction/assessment method elaborations and course outline. Minimum Entry Requirements and Job Roles (which aren't stored in the SSG CP template) are optionally AI-generated from the imported course details.
 
 ### Course Details
 
@@ -42,6 +46,11 @@ Configure course parameters used across all sections:
 - AI-powered course title suggestions (20 SEO-friendly titles from a topic)
 - Optional special requirements field for topic generation and min entry requirements
 - Auto-calculated duration per topic, per method
+
+### Interface
+
+- One-click **dark / light theme toggle** (top-right), defaulting to dark
+- Sidebar navigation grouped into Prepare CP and Submit CP sections
 
 ## Tech Stack
 
@@ -84,10 +93,13 @@ wsq-casl-cp-generator/
 │   ├── ai_generator.py              # AI prompt templates & generation functions
 │   ├── config.py                    # Excel cell reference mappings
 │   ├── models.py                    # Pydantic data models
-│   ├── extractor.py                 # Excel data extraction
+│   ├── extractor.py                 # Excel data extraction & CP import helpers
+│   ├── simple_lesson_plan.py        # Deterministic lesson plan schedule builder
 │   ├── generator_docx.py            # Course Document & Audit Report generation (.docx)
 │   ├── generator_lesson_plan.py     # Lesson Plan generation (.docx)
-│   └── generator_lesson_plan_pdf.py # Lesson Plan generation (.pdf)
+│   └── generator_lesson_plan_pdf.py # Lesson Plan generation (.pdf, Unicode-safe)
+├── .streamlit/
+│   └── config.toml                  # Theme config (dark default)
 ├── .claude/
 │   ├── commands/start-cp.md         # Claude Code skill to launch Streamlit
 │   └── skills/                      # Claude Code skills for schedule & topic generation
