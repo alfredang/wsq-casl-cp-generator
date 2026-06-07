@@ -40,6 +40,13 @@ ASSESS_COL_DURATION = "L"
 ASSESS_COL_ASSESSORS = "M"
 ASSESS_COL_CANDIDATES = "N"
 
+# --- Methodologies - method elaborations (Sheet 3 - Methodologies) ---
+# Unique method name + appropriateness elaboration, data from METH_DATA_START_ROW.
+METH_COL_IM_NAME = "G"  # List of instructional methods utilised
+METH_COL_IM_DESC = "H"  # Elaborate on appropriateness of the instructional method
+METH_COL_AM_NAME = "K"  # Mode of assessment
+METH_COL_AM_DESC = "O"  # Elaborate on appropriateness of the mode of assessment
+
 # --- Summary (Sheet 3 - Summary) ---
 SUMM_TOTAL_COURSE_DURATION = "G3"
 SUMM_TOTAL_INSTRUCTIONAL = "G4"

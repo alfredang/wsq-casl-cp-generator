@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 
 import openpyxl
@@ -111,6 +112,22 @@ def _extract_assessment_modes(wb) -> list[AssessmentMode]:
     return assessments
 
 
+def _extract_method_descriptions(wb, name_col: str, desc_col: str) -> dict[str, str]:
+    """Read unique method name -> appropriateness elaboration pairs from the
+    Methodologies sheet (e.g. G/H for instruction, K/O for assessment)."""
+    ws = wb[config.SHEET_METHODOLOGIES]
+    descriptions: dict[str, str] = {}
+    row = config.METH_DATA_START_ROW
+    while True:
+        name = ws[f"{name_col}{row}"].value
+        if name is None or not str(name).strip():
+            break
+        desc = ws[f"{desc_col}{row}"].value
+        descriptions[str(name).strip()] = str(desc).strip() if desc is not None else ""
+        row += 1
+    return descriptions
+
+
 def _extract_summary(wb) -> CourseSummary:
     ws = wb[config.SHEET_SUMMARY]
     return CourseSummary(
@@ -119,6 +136,56 @@ def _extract_summary(wb) -> CourseSummary:
         total_assessment_duration=_cell_val(ws, config.SUMM_TOTAL_ASSESSMENT),
         mode_of_training=_cell_val(ws, config.SUMM_MODE_OF_TRAINING),
     )
+
+
+def build_course_topics(data: ExtractedData) -> str:
+    """Reconstruct the Course Topics markdown (## Topic N: title / - outcome)
+    used on the Course Details page, from an extracted CP's learning outcomes."""
+    lines = []
+    for i, lo in enumerate(data.learning_outcomes, start=1):
+        # Topic cell often looks like "T1: <title>" — drop the T# prefix.
+        topic = re.sub(r"^\s*T\d+\s*:\s*", "", lo.topic.strip()).strip()
+        lines.append(f"## Topic {i}: {topic}")
+        if lo.learning_outcome.strip():
+            lines.append(f"- {lo.learning_outcome.strip()}")
+        lines.append("")
+    return "\n".join(lines).strip()
+
+
+def build_course_outline(data: ExtractedData) -> str:
+    """Build a course outline text (same 3-section format as the AI generator)
+    from data extracted out of an existing CP Excel file."""
+    lines = ["(1) The list of topics covered in this course"]
+    for i, lo in enumerate(data.learning_outcomes, start=1):
+        desc = lo.learning_outcome.strip()
+        # Topic cell often looks like "T1: <title>" — drop the T# prefix.
+        topic = re.sub(r"^\s*T\d+\s*:\s*", "", lo.topic.strip()).strip()
+        if desc:
+            lines.append(f"T{i}: {topic} - {desc}")
+        else:
+            lines.append(f"T{i}: {topic}")
+
+    # Section (2): unique instructional methods, preserving order
+    lines.append("")
+    lines.append("(2) Instructional methods")
+    seen = set()
+    for im in data.instruction_methods:
+        method = im.method.strip()
+        if not method or method.lower() in seen:
+            continue
+        seen.add(method.lower())
+        if im.mode_of_training.strip():
+            lines.append(f"{method} - {im.mode_of_training.strip()}")
+        else:
+            lines.append(method)
+
+    # Section (3): duration per topic
+    lines.append("")
+    lines.append("(3) Duration for each topic")
+    for i, lo in enumerate(data.learning_outcomes, start=1):
+        lines.append(f"Topic {i}: {lo.duration_minutes}mins")
+
+    return "\n".join(lines)
 
 
 def extract_data(file_path: Path) -> ExtractedData:
@@ -131,6 +198,12 @@ def extract_data(file_path: Path) -> ExtractedData:
             instruction_methods=_extract_instruction_methods(wb),
             assessment_modes=_extract_assessment_modes(wb),
             summary=_extract_summary(wb),
+            instruction_method_descriptions=_extract_method_descriptions(
+                wb, config.METH_COL_IM_NAME, config.METH_COL_IM_DESC
+            ),
+            assessment_method_descriptions=_extract_method_descriptions(
+                wb, config.METH_COL_AM_NAME, config.METH_COL_AM_DESC
+            ),
         )
     finally:
         wb.close()

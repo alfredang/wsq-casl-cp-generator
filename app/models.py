@@ -52,3 +52,6 @@ class ExtractedData(BaseModel):
     instruction_methods: list[InstructionMethod]
     assessment_modes: list[AssessmentMode]
     summary: CourseSummary
+    # Unique method name -> appropriateness elaboration (Methodologies G/H, K/O)
+    instruction_method_descriptions: dict[str, str] = {}
+    assessment_method_descriptions: dict[str, str] = {}

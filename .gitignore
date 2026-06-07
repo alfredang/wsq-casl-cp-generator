@@ -11,3 +11,9 @@ wheels/
 
 # Generated output files
 output/
+
+# OS / editor
+.DS_Store
+
+# Playwright test artifacts
+.playwright-mcp/

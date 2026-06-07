@@ -1,3 +1,4 @@
+import html
 import re
 import tempfile
 from pathlib import Path
@@ -42,12 +43,191 @@ from app.ai_generator import (
     generate_minimum_entry_requirement,
     generate_what_youll_learn,
 )
-from app.extractor import extract_data
+from app.extractor import build_course_outline, build_course_topics, extract_data
+from app.simple_lesson_plan import DEFAULT_RESOURCES, build_simple_lesson_plan
 from app.generator_docx import generate_audit_report
-from app.generator_lesson_plan import generate_lesson_plan_table
-from app.generator_lesson_plan_pdf import generate_lesson_plan_pdf_table
+from app.generator_lesson_plan import (
+    generate_lesson_plan_table,
+    generate_simple_lesson_plan_docx,
+)
+from app.generator_lesson_plan_pdf import (
+    generate_lesson_plan_pdf_table,
+    generate_simple_lesson_plan_pdf,
+)
 
 st.set_page_config(page_title="CASL Course Document Generator", page_icon="📄", layout="wide")
+
+
+LIGHT_THEME_CSS = """
+<style>
+:root { color-scheme: light; }
+.stApp, [data-testid="stHeader"], [data-testid="stAppViewContainer"] {
+    background-color: #ffffff;
+    color: #1a1a1a;
+}
+[data-testid="stSidebar"] { background-color: #f3f4f6; }
+[data-testid="stSidebar"] * { color: #1a1a1a; }
+.stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5, .stApp h6,
+.stApp p, .stApp li, .stApp label, .stApp span,
+[data-testid="stMarkdownContainer"], [data-testid="stWidgetLabel"] {
+    color: #1a1a1a;
+}
+/* Inputs, text areas, number inputs, selects */
+.stApp input, .stApp textarea,
+[data-baseweb="input"], [data-baseweb="textarea"], [data-baseweb="select"] > div {
+    background-color: #ffffff !important;
+    color: #1a1a1a !important;
+}
+/* Dropdown / popover menus (rendered in portals) */
+[data-baseweb="popover"], [data-baseweb="menu"], [role="listbox"] {
+    background-color: #ffffff !important;
+    color: #1a1a1a !important;
+}
+[role="option"] { color: #1a1a1a !important; }
+/* Multiselect chips */
+[data-baseweb="tag"] { color: #ffffff !important; }
+/* Code blocks */
+.stApp pre, .stApp code { background-color: #f3f4f6 !important; color: #1a1a1a !important; }
+/* Dataframes */
+[data-testid="stDataFrame"] { background-color: #ffffff; }
+/* Secondary (non-primary) buttons */
+.stButton button[kind="secondary"] {
+    background-color: #ffffff !important;
+    color: #1a1a1a !important;
+    border: 1px solid #d0d0d0 !important;
+}
+/* Expander */
+[data-testid="stExpander"] details {
+    background-color: #f8f9fa !important;
+    border: 1px solid #e0e0e0 !important;
+}
+</style>
+"""
+
+
+BASE_CSS = """
+<style>
+/* Trim the large default top padding above the page content */
+.block-container, [data-testid="stMainBlockContainer"] {
+    padding-top: 3rem;
+}
+/* Hide the unused Deploy button so the theme toggle has room top-right */
+[data-testid="stAppDeployButton"] { display: none; }
+/* Keep the theme toggle compact and on one line */
+[data-testid="stMain"] [data-testid="stToggle"] label p { white-space: nowrap; }
+</style>
+"""
+
+
+def apply_theme(light: bool) -> None:
+    """Apply the selected theme. Dark is handled by .streamlit/config.toml;
+    light mode injects CSS overrides at runtime."""
+    st.markdown(BASE_CSS, unsafe_allow_html=True)
+    if light:
+        st.markdown(LIGHT_THEME_CSS, unsafe_allow_html=True)
+
+
+def _render_lesson_plan_table(rows: list[dict]) -> str:
+    """Render a day's lesson plan rows as a theme-friendly HTML table that wraps
+    long topic text and shows all four columns within the container width."""
+    cols = [
+        ("Time", "time", "15%"),
+        ("Topics", "topic", "45%"),
+        ("Instructional Methods", "method", "22%"),
+        ("Resources", "resources", "18%"),
+    ]
+    border = "1px solid rgba(128,128,128,0.4)"
+    th = (
+        f"text-align:left;padding:6px 10px;border:{border};"
+        "font-weight:600;vertical-align:top;"
+    )
+    td = f"padding:6px 10px;border:{border};vertical-align:top;"
+    head = "".join(
+        f'<th style="{th}width:{w};">{html.escape(label)}</th>' for label, _, w in cols
+    )
+    body = ""
+    for r in rows:
+        body += "<tr>" + "".join(
+            f'<td style="{td}">{html.escape(str(r[key]))}</td>' for _, key, _ in cols
+        ) + "</tr>"
+    return (
+        '<table style="width:100%;border-collapse:collapse;font-size:0.9rem;'
+        f'margin-bottom:0.5rem;"><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table>'
+    )
+
+
+def populate_session_from_cp(data) -> list[str]:
+    """Populate all session state from an extracted CP so every page is pre-filled.
+
+    Returns the list of section labels that were populated.
+    """
+    p = data.particulars
+    populated: list[str] = []
+
+    # --- Course Details: title & topics ---
+    if p.course_title:
+        st.session_state["saved_course_title"] = p.course_title
+        st.session_state["cd_course_title"] = p.course_title
+        populated.append("Course Title")
+
+    topics_md = build_course_topics(data)
+    if topics_md:
+        st.session_state["saved_course_topics"] = topics_md
+        st.session_state["cd_course_topics"] = topics_md
+        st.session_state["saved_num_topics"] = len(data.learning_outcomes)
+        populated.append("Course Topics")
+
+    # --- Course Details: durations (derived from CP durations) ---
+    instr_min = sum(lo.duration_minutes for lo in data.learning_outcomes)
+    assess_min = sum(a.duration_minutes for a in data.assessment_modes)
+    if instr_min:
+        st.session_state["saved_instructional_duration"] = max(1, round(instr_min / 60))
+    st.session_state["saved_assessment_duration"] = round(assess_min / 60) if assess_min else 0
+    total_min = instr_min + assess_min
+    if total_min:
+        st.session_state["saved_course_duration"] = max(1, round(total_min / 60))
+
+    # --- Course Details: methods (filtered to known options) ---
+    valid_im = [m for m in data.instruction_method_descriptions if m in INSTRUCTION_METHODS_LIST]
+    if valid_im:
+        st.session_state["saved_instr_methods"] = valid_im
+        st.session_state["saved_num_instr_methods"] = len(valid_im)
+    valid_am = [m for m in data.assessment_method_descriptions if m in ASSESSMENT_METHODS_LIST]
+    st.session_state["saved_assess_methods"] = valid_am
+    st.session_state["saved_num_assess_methods"] = len(valid_am)
+
+    # --- Course Details: CASL unique skill name ---
+    if st.session_state.get("cp_mode") == "CASL" and p.unique_skill_names:
+        usn = p.unique_skill_names[0]
+        if usn in UNIQUE_SKILL_NAMES_LIST:
+            st.session_state["saved_unique_skill_name"] = usn
+            st.session_state["cd_unique_skill_name"] = usn
+
+    # --- Generated text sections ---
+    if p.about_course:
+        st.session_state["about_course_text"] = p.about_course
+        populated.append("About This Course")
+    if p.what_youll_learn:
+        st.session_state["wyl_text"] = p.what_youll_learn
+        populated.append("What You'll Learn")
+    if data.background.targeted_sectors:
+        st.session_state["bg_text"] = data.background.targeted_sectors
+        populated.append("Background Part A")
+    if data.background.performance_gaps:
+        st.session_state["bgb_text"] = data.background.performance_gaps
+        populated.append("Background Part B")
+    if data.instruction_method_descriptions:
+        st.session_state["im_results"] = dict(data.instruction_method_descriptions)
+        populated.append("Instructional Methods")
+    if data.assessment_method_descriptions:
+        st.session_state["am_results"] = dict(data.assessment_method_descriptions)
+        populated.append("Assessment Methods")
+
+    # --- Course Outline ---
+    st.session_state["co_text"] = build_course_outline(data)
+    populated.append("Course Outline")
+
+    return populated
 
 # --- Sidebar Navigation ---
 if "active_page" not in st.session_state:
@@ -128,6 +308,14 @@ with st.sidebar:
 
 active_page = st.session_state["active_page"]
 
+# --- Top bar: single dark/light theme toggle, aligned to the top right ---
+_top_spacer, _top_right = st.columns([8, 2])
+with _top_right:
+    light_mode = st.toggle("☀️ Light mode", value=False, key="light_mode")
+
+# --- Apply selected theme (dark default via config; light via CSS overrides) ---
+apply_theme(light_mode)
+
 # --- Helper: saved course details from session state ---
 saved_title = st.session_state.get("saved_course_title", "")
 saved_topics = st.session_state.get("saved_course_topics", "")
@@ -139,6 +327,79 @@ has_course_details = bool(saved_title and saved_topics)
 if active_page == "Course Details":
     st.header("Course Details")
     st.markdown("Enter the course title and topics. This information will be used across all Prepare CP pages.")
+
+    # --- Show import summary (after a successful import + rerun) ---
+    if st.session_state.get("cp_import_summary"):
+        st.success(
+            "Imported from CP — populated: "
+            + ", ".join(st.session_state.pop("cp_import_summary"))
+        )
+
+    # --- Upload an existing CP to auto-fill every page ---
+    with st.expander("📥 Upload existing CP to auto-fill all pages", expanded=False):
+        st.markdown(
+            "Upload an existing Course Proposal Excel file to automatically "
+            "populate **every page** — course details, topics, durations, methods, "
+            "About, What You'll Learn, Background, instruction/assessment method "
+            "elaborations and the Course Outline. "
+            "Minimum Entry Requirements and Job Roles aren't stored in the CP, "
+            "so they can be generated with AI."
+        )
+        cp_import_file = st.file_uploader(
+            "Upload CP Excel file", type=["xlsx"],
+            help="Select the .xlsx Course Proposal file to import",
+            key="cd_cp_import",
+        )
+        auto_mer_jr = st.checkbox(
+            "Also auto-generate Minimum Entry Requirements & Job Roles with AI",
+            value=True, key="cd_cp_import_mer_jr",
+        )
+        if cp_import_file is not None:
+            st.success(
+                f"**{cp_import_file.name}** uploaded "
+                f"({cp_import_file.size / 1024:.0f} KB)"
+            )
+            if st.button(
+                "Import & Auto-fill",
+                type="primary",
+                use_container_width=True,
+                key="cd_cp_import_btn",
+            ):
+                imported = None
+                with st.spinner("Extracting CP and populating all pages..."):
+                    try:
+                        with tempfile.TemporaryDirectory() as tmp_dir:
+                            tmp_path = Path(tmp_dir) / cp_import_file.name
+                            tmp_path.write_bytes(cp_import_file.getvalue())
+                            imported_data = extract_data(tmp_path)
+                        imported = populate_session_from_cp(imported_data)
+                    except Exception as e:
+                        st.error(f"Failed to import CP: {e}")
+
+                if imported is not None:
+                    title = st.session_state.get("saved_course_title", "")
+                    topics = st.session_state.get("saved_course_topics", "")
+                    if auto_mer_jr and title and topics:
+                        with st.spinner("Generating Minimum Entry Requirements..."):
+                            try:
+                                st.session_state["mer_text"] = generate_minimum_entry_requirement(
+                                    title, topics,
+                                    prompt_template=st.session_state.get("mer_prompt"),
+                                )
+                                imported.append("Min Entry Requirements")
+                            except Exception as e:
+                                st.warning(f"Could not generate Min Entry Requirements: {e}")
+                        with st.spinner("Generating Job Roles..."):
+                            try:
+                                st.session_state["jr_text"] = generate_job_roles(
+                                    title, topics,
+                                    prompt_template=st.session_state.get("jr_prompt"),
+                                )
+                                imported.append("Job Roles")
+                            except Exception as e:
+                                st.warning(f"Could not generate Job Roles: {e}")
+                    st.session_state["cp_import_summary"] = imported
+                    st.rerun()
 
     # --- Course Title (outside form) ---
     if "cd_course_title" not in st.session_state:
@@ -185,12 +446,14 @@ if active_page == "Course Details":
 
     # --- CASL-specific fields ---
     if st.session_state.get("cp_mode") == "CASL":
+        if "cd_unique_skill_name" not in st.session_state:
+            _saved_usn = st.session_state.get("saved_unique_skill_name", "")
+            st.session_state["cd_unique_skill_name"] = (
+                _saved_usn if _saved_usn in UNIQUE_SKILL_NAMES_LIST else UNIQUE_SKILL_NAMES_LIST[0]
+            )
         unique_skill_name = st.selectbox(
             "Unique Skill Name",
             options=UNIQUE_SKILL_NAMES_LIST,
-            index=UNIQUE_SKILL_NAMES_LIST.index(st.session_state["saved_unique_skill_name"])
-            if st.session_state.get("saved_unique_skill_name") in UNIQUE_SKILL_NAMES_LIST
-            else 0,
             key="cd_unique_skill_name",
         )
 
@@ -1036,6 +1299,11 @@ elif active_page == "Course Outline":
         "instructional methods, and duration for each topic."
     )
 
+    st.caption(
+        "Tip: to import an outline (and all other sections) from an existing CP, "
+        "use **Upload existing CP** on the Course Details page."
+    )
+
     # --- Editable prompt template ---
     with st.expander("Prompt Template", expanded=False):
         co_prompt = st.text_area(
@@ -1107,6 +1375,117 @@ elif active_page == "Lesson Plan":
         "Generate a lesson plan from your course details. "
         "Downloads are available as Word (.docx) and PDF (.pdf)."
     )
+
+    # --- Simple Lesson Plan (deterministic schedule table) ---
+    if has_course_details:
+        st.divider()
+        st.subheader("Simple Lesson Plan")
+        st.markdown(
+            "A schedule table built directly from your topics, instructional "
+            "methods/duration and assessment methods/duration."
+        )
+
+        col_res, col_lesson, col_assess = st.columns([2, 1, 1])
+        with col_res:
+            slp_resources = st.text_input(
+                "Resources",
+                value=st.session_state.get("slp_resources", DEFAULT_RESOURCES),
+                key="slp_resources",
+                help="Resources listed for each topic / assessment row.",
+            )
+        with col_lesson:
+            # Standard 8-hr day = 7 hr lesson + 1 hr assessment.
+            slp_instr_hrs = st.number_input(
+                "Lesson Duration (hrs)",
+                min_value=0.5,
+                value=7.0,
+                step=0.5,
+                format="%.1f",
+                key="slp_instr_hrs",
+                help="Total instructional/lesson hours (excludes assessment).",
+            )
+        with col_assess:
+            slp_assess_hrs = st.number_input(
+                "Assessment Duration (hrs)",
+                min_value=0.0,
+                value=1.0,
+                step=0.5,
+                format="%.1f",
+                key="slp_assess_hrs",
+                help="Assessment block placed at the end of the last day.",
+            )
+
+        slp = build_simple_lesson_plan(
+            course_topics=saved_topics,
+            num_topics=st.session_state.get("saved_num_topics", 4),
+            instructional_hours=slp_instr_hrs,
+            assessment_hours=slp_assess_hrs,
+            instructional_methods=st.session_state.get("saved_instr_methods", []),
+            assessment_methods=st.session_state.get("saved_assess_methods", []),
+            resources=slp_resources or DEFAULT_RESOURCES,
+        )
+        slp_course_hrs = slp_instr_hrs + slp_assess_hrs
+
+        st.caption(
+            f"{slp['num_days']} day(s) · {slp_instr_hrs:g} hr lesson + {slp_assess_hrs:g} hr assessment · "
+            f"{slp['topic_minutes']} mins per topic · 9:00 AM – 6:00 PM"
+        )
+
+        for day_idx, day_rows in enumerate(slp["days"], start=1):
+            st.markdown(f"**Day {day_idx}**")
+            st.markdown(_render_lesson_plan_table(day_rows), unsafe_allow_html=True)
+
+        # --- Word / PDF downloads ---
+        # Generate each format independently and defensively so a failure in one
+        # never breaks the page or hides the other download.
+        safe_slp_name = saved_title.replace(" ", "_") if saved_title else "Lesson_Plan"
+        slp_docx_bytes = None
+        slp_pdf_bytes = None
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            try:
+                docx_path = Path(tmp_dir) / "simple_lesson_plan.docx"
+                generate_simple_lesson_plan_docx(
+                    saved_title, slp["days"], docx_path,
+                    topic_minutes=slp["topic_minutes"],
+                    course_duration_hrs=slp_course_hrs,
+                )
+                slp_docx_bytes = docx_path.read_bytes()
+            except Exception as e:
+                st.warning(f"Could not build the Word file: {e}")
+
+            try:
+                pdf_path = Path(tmp_dir) / "simple_lesson_plan.pdf"
+                generate_simple_lesson_plan_pdf(
+                    saved_title, slp["days"], pdf_path,
+                    topic_minutes=slp["topic_minutes"],
+                    course_duration_hrs=slp_course_hrs,
+                )
+                slp_pdf_bytes = pdf_path.read_bytes()
+            except Exception as e:
+                st.warning(f"Could not build the PDF file: {e}")
+
+        col_dl_docx, col_dl_pdf = st.columns(2)
+        with col_dl_docx:
+            st.download_button(
+                label="Download Simple Lesson Plan (.docx)",
+                data=slp_docx_bytes or b"",
+                file_name=f"{safe_slp_name}_Simple_Lesson_Plan.docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                use_container_width=True,
+                disabled=slp_docx_bytes is None,
+            )
+        with col_dl_pdf:
+            st.download_button(
+                label="Download Simple Lesson Plan (.pdf)",
+                data=slp_pdf_bytes or b"",
+                file_name=f"{safe_slp_name}_Simple_Lesson_Plan.pdf",
+                mime="application/pdf",
+                use_container_width=True,
+                disabled=slp_pdf_bytes is None,
+            )
+
+        st.divider()
+        st.subheader("AI-Generated Lesson Plan")
 
     # --- AI prompt template ---
     with st.expander("AI Prompt Template", expanded=False):

@@ -176,6 +176,82 @@ def generate_lesson_plan(data: ExtractedData, output_path: Path) -> Path:
     return output_path
 
 
+def generate_simple_lesson_plan_docx(
+    course_title: str,
+    days: list[list[dict]],
+    output_path: Path,
+    topic_minutes: int | None = None,
+    course_duration_hrs: float | None = None,
+) -> Path:
+    """Generate a simple lesson plan .docx with a 4-column table per day:
+    Time, Topics, Instructional Methods, Resources.
+
+    ``days`` is the ``days`` list returned by ``build_simple_lesson_plan`` —
+    each item is a list of row dicts with keys: time, topic, method, resources.
+    """
+    doc = Document()
+
+    style = doc.styles["Normal"]
+    style.font.name = "Arial"
+    style.font.size = Pt(11)
+    style.paragraph_format.space_after = Pt(6)
+
+    # Title
+    title_para = doc.add_paragraph()
+    title_run = title_para.add_run(f"Lesson Plan: {course_title}")
+    title_run.bold = True
+    title_run.font.size = Pt(14)
+    title_run.font.name = "Arial"
+
+    # Metadata
+    duration_label = (
+        f"{course_duration_hrs:g} hrs / {len(days)} Day(s)"
+        if course_duration_hrs
+        else f"{len(days)} Day(s)"
+    )
+    meta = [f"Course Duration: {duration_label} (9:00 AM - 6:00 PM daily)"]
+    if topic_minutes:
+        meta.append(f"Duration per Topic: {topic_minutes} mins")
+    for line in meta:
+        p = doc.add_paragraph(line)
+        for run in p.runs:
+            run.font.name = "Arial"
+            run.font.size = Pt(11)
+        p.paragraph_format.space_after = Pt(2)
+
+    headers = ["Time", "Topics", "Instructional Methods", "Resources"]
+    col_widths = [Inches(1.2), Inches(2.6), Inches(1.6), Inches(1.1)]
+    keys = ["time", "topic", "method", "resources"]
+
+    for day_idx, rows in enumerate(days, start=1):
+        _add_colored_heading(doc, f"Day {day_idx}")
+
+        table = doc.add_table(rows=1, cols=4)
+        table.style = "Table Grid"
+        table.autofit = False
+        for c, w in enumerate(col_widths):
+            table.columns[c].width = w
+
+        for c, header in enumerate(headers):
+            _set_header_cell(table.rows[0].cells[c], header)
+
+        for row_data in rows:
+            row = table.add_row()
+            for j, key in enumerate(keys):
+                cell = row.cells[j]
+                cell.width = col_widths[j]
+                cell.text = ""
+                p = cell.paragraphs[0]
+                run = p.add_run(str(row_data.get(key, "")))
+                run.font.name = "Arial"
+                run.font.size = Pt(11)
+
+        doc.add_paragraph()
+
+    doc.save(str(output_path))
+    return output_path
+
+
 def _set_header_cell(cell, text: str):
     from docx.oxml.ns import qn
     cell.text = ""

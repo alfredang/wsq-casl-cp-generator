@@ -1,0 +1,4 @@
+[theme]
+# Default theme is dark. The in-app toggle (sidebar) switches to light at runtime.
+base = "dark"
+primaryColor = "#F25C54"
