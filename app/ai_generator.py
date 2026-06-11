@@ -1,10 +1,59 @@
 import asyncio
 import csv
+import os
 from pathlib import Path
 
-from claude_agent_sdk import query, ClaudeAgentOptions, AssistantMessage, TextBlock, ResultMessage
+# CRITICAL: Unset CLAUDECODE env var to allow this app to use Claude Code
+# This must happen before importing claude_agent_sdk
+_ORIGINAL_CLAUDECODE = os.environ.pop("CLAUDECODE", None)
+
+from claude_agent_sdk import query, AssistantMessage, TextBlock, ClaudeAgentOptions
 
 _SKILLS_CSV = Path(__file__).resolve().parent.parent / ".claude" / "skills" / "generate_topics" / "skills_description.csv"
+
+
+def _find_claude_cli() -> str | None:
+    """Find Claude Code CLI executable path.
+
+    Note: ``AppData/Local/AnthropicClaude/claude.exe`` is the Claude DESKTOP
+    app, not the CLI — driving it via the Agent SDK hangs on the initialize
+    handshake, so we deliberately do NOT look there.
+    """
+    home = Path(os.path.expanduser("~"))
+
+    # Pick the highest-numbered installed CLI version under the native installer dir.
+    native_dir = home / "AppData" / "Roaming" / "Claude" / "claude-code"
+    if native_dir.is_dir():
+        versions = []
+        for child in native_dir.iterdir():
+            exe = child / "claude.exe"
+            if exe.exists():
+                parts = child.name.split(".")
+                try:
+                    key = tuple(int(p) for p in parts)
+                except ValueError:
+                    key = (0,)
+                versions.append((key, exe))
+        if versions:
+            versions.sort()
+            return str(versions[-1][1])
+
+    # npm global install fallback
+    npm_cmd = home / "AppData" / "Roaming" / "npm" / "claude.cmd"
+    if npm_cmd.exists():
+        return str(npm_cmd)
+
+    # PATH fallback
+    import shutil
+    claude_in_path = shutil.which("claude")
+    if claude_in_path:
+        return claude_in_path
+
+    return None
+
+
+# Find Claude CLI path on module load
+_CLAUDE_CLI_PATH = _find_claude_cli()
 
 
 def load_skills_data() -> tuple[list[str], dict[str, str]]:
@@ -48,7 +97,14 @@ upgrading, professional development)
 - The target learner level is generally beginner to intermediate; reflect this \
 in the description
 - Keep the tone professional, engaging, and encouraging
-- Write exactly ONE cohesive paragraph of 80-120 words
+- Write exactly 2 cohesive paragraphs of 350 words
+- Give a high level overview of your course
+- Highlight the benefits your course offers including skills, competencies and \
+needs that the course will address
+- Explain how the course is relevant to the industry and how it may impact the \
+learner's career in terms of employment/job upgrading opportunities
+- Indicate in the start of the second paragraph if the course is for beginner, \
+intermediate or advanced learners
 - Do NOT use bullet points, numbered lists, or headings
 - Do NOT include the course title in the opening words; weave it in naturally \
 or refer to "this course"
@@ -80,37 +136,84 @@ skills for making informed decisions that drive organisational success.
 Respond with ONLY the paragraph text, nothing else."""
 
 
-async def _generate_async(prompt_template: str, **format_kwargs: str) -> str:
-    """Call Claude via the Agent SDK and return the generated text."""
-    prompt = prompt_template.format(**format_kwargs)
-
-    options = ClaudeAgentOptions(
-        allowed_tools=[],
-        max_turns=1,
-    )
-
+async def _generate_async(prompt: str) -> str:
+    """Async function to generate content using Claude Agent SDK."""
     result_text = ""
+
+    # Configure options with CLI path if found
+    options = None
+    if _CLAUDE_CLI_PATH:
+        options = ClaudeAgentOptions(cli_path=_CLAUDE_CLI_PATH)
+
+    # Iterate through messages from Claude Code
     async for message in query(prompt=prompt, options=options):
+        # Extract text from AssistantMessage blocks
         if isinstance(message, AssistantMessage):
             for block in message.content:
                 if isinstance(block, TextBlock):
                     result_text += block.text
-        elif isinstance(message, ResultMessage):
-            if message.is_error:
-                raise RuntimeError(
-                    message.result or "Claude Agent SDK returned an error."
-                )
-
-    if not result_text.strip():
-        raise RuntimeError("No text was generated. Please try again.")
 
     return result_text.strip()
+
+
+def _generate(prompt_template: str, **format_kwargs: str) -> str:
+    """Generate content using Claude Agent SDK (Claude Code subscription only - NO API key needed).
+
+    This function uses your local Claude Code CLI and your Claude Code subscription.
+    NO API key required!
+    """
+    prompt = prompt_template.format(**format_kwargs)
+
+    try:
+        # CRITICAL FIX: Windows requires ProactorEventLoop for subprocess support
+        if os.name == 'nt':  # Windows
+            asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+
+        # Run the async query function in a synchronous context
+        result_text = asyncio.run(_generate_async(prompt))
+
+        if not result_text or not result_text.strip():
+            raise RuntimeError("No text was generated. Please try again.")
+
+        return result_text.strip()
+
+    except Exception as e:
+        import traceback
+        error_msg = str(e)
+        full_trace = traceback.format_exc()
+
+        # Log to file for debugging
+        with open("ai_generator_error.log", "a") as f:
+            f.write(f"\n\n=== Error at {os.environ.get('DATE', 'unknown')} ===\n")
+            f.write(f"CLAUDECODE env var: {os.environ.get('CLAUDECODE', 'NOT SET')}\n")
+            f.write(f"CLI Path: {_CLAUDE_CLI_PATH}\n")
+            f.write(f"Error: {error_msg}\n")
+            f.write(f"Full trace:\n{full_trace}\n")
+
+        if "claude: command not found" in error_msg.lower() or "clinotfounderror" in error_msg.lower():
+            raise RuntimeError(
+                "❌ Claude Code CLI not found!\n\n"
+                "This app requires Claude Code to be installed and in your PATH.\n\n"
+                "To fix this:\n"
+                "1. Make sure Claude Code is installed\n"
+                "2. Add Claude Code to your system PATH (see previous instructions)\n"
+                "3. Restart your terminal and Streamlit app\n\n"
+                f"Technical error: {error_msg}"
+            )
+        raise RuntimeError(
+            f"Failed to generate content using Claude Code subscription: {error_msg}\n\n"
+            "Check ai_generator_error.log for details.\n\n"
+            "Make sure:\n"
+            "- Claude Code CLI is installed and in your PATH\n"
+            "- You have an active Claude Code subscription\n"
+            "- You're running this locally (not on a remote server)"
+        )
 
 
 def generate_about_course(course_title: str, course_topics: str, prompt_template: str | None = None) -> str:
     """Generate an 'About the Course' description using the Claude Agent SDK."""
     template = prompt_template or ABOUT_COURSE_PROMPT_TEMPLATE
-    return asyncio.run(_generate_async(template, course_title=course_title, course_topics=course_topics))
+    return _generate(template, course_title=course_title, course_topics=course_topics)
 
 
 WHAT_YOULL_LEARN_PROMPT_TEMPLATE = """\
@@ -196,7 +299,7 @@ Respond with ONLY the bullet points, nothing else."""
 def generate_what_youll_learn(course_title: str, course_topics: str, prompt_template: str | None = None) -> str:
     """Generate a 'What You'll Learn' section using the Claude Agent SDK."""
     template = prompt_template or WHAT_YOULL_LEARN_PROMPT_TEMPLATE
-    return asyncio.run(_generate_async(template, course_title=course_title, course_topics=course_topics))
+    return _generate(template, course_title=course_title, course_topics=course_topics)
 
 
 BACKGROUND_PART_A_PROMPT_TEMPLATE = """\
@@ -247,7 +350,7 @@ Respond with ONLY the paragraph text, nothing else."""
 def generate_background_part_a(course_title: str, course_topics: str, prompt_template: str | None = None) -> str:
     """Generate a 'Background Part A' section using the Claude Agent SDK."""
     template = prompt_template or BACKGROUND_PART_A_PROMPT_TEMPLATE
-    return asyncio.run(_generate_async(template, course_title=course_title, course_topics=course_topics))
+    return _generate(template, course_title=course_title, course_topics=course_topics)
 
 
 BACKGROUND_PART_B_PROMPT_TEMPLATE = """\
@@ -329,7 +432,7 @@ Respond with ONLY the text, nothing else."""
 def generate_background_part_b(course_title: str, course_topics: str, prompt_template: str | None = None) -> str:
     """Generate a 'Background Part B' section using the Claude Agent SDK."""
     template = prompt_template or BACKGROUND_PART_B_PROMPT_TEMPLATE
-    return asyncio.run(_generate_async(template, course_title=course_title, course_topics=course_topics))
+    return _generate(template, course_title=course_title, course_topics=course_topics)
 
 
 INSTRUCTION_METHOD_PROMPT_TEMPLATE = """\
@@ -407,44 +510,66 @@ of the given mode of assessment for the following course.
 
 Course Title: {course_title}
 
-Course Topics:
+Course Topics (with learning outcomes):
 {course_topics}
 
 Assessment Method: {method_name}
 
+Number of Days: {num_days}
+
 Guidelines:
-- Explain why this assessment method is appropriate for evaluating learners' \
-understanding and applied knowledge of the course topics
-- Describe what the assessment enables learners to demonstrate (comprehension, \
-application of frameworks, articulation of concepts)
+- This course runs over {num_days} day(s), and there is ONE assessment per day. \
+Produce a SEPARATE assessment writeup for EACH day ({num_days} writeups in total).
+- Distribute the course topics and their learning outcomes sequentially and \
+evenly across the days: Day 1 covers the first group of topics and learning \
+outcomes, Day 2 covers the next group, and so on. For example, in a 2-day course \
+with four learning outcomes, Day 1 covers LO1 and LO2 and Day 2 covers LO3 and LO4.
+- Begin each day's writeup with a single heading line exactly in the form \
+"Day N Assessment" (e.g. "Day 1 Assessment"), then the paragraphs for that day.
+- For each day, explain why this assessment method is appropriate for evaluating \
+learners' understanding and applied knowledge of THAT day's topics and learning \
+outcomes
+- Describe what each day's assessment enables learners to demonstrate \
+(comprehension, application of frameworks, articulation of concepts)
 - Explain why this format is suitable (structured evaluation, objectivity, \
 consistency, fairness)
-- Connect the assessment to the knowledge-based learning outcomes of the course
-- Write 2-3 cohesive paragraphs totalling 100-200 words
+- Connect each day's assessment to that day's knowledge-based learning outcomes
+- Write 2-3 cohesive paragraphs totalling 100-200 words PER DAY
 - Write in a professional, factual tone suitable for a course proposal document
-- Do NOT use bullet points, numbered lists, or headings
+- Do NOT use bullet points or numbered lists; the ONLY headings allowed are the \
+"Day N Assessment" labels
 - Do NOT use markdown formatting
 
 Examples:
 
-Example 1 (Written Examination):
+Example (2-day course, Written Examination):
+Day 1 Assessment
 • The Written Examination is an appropriate assessment method for evaluating \
-learners' theoretical understanding and applied knowledge of key productivity \
-and innovation concepts covered in the Productivity and Innovation Strategy \
-course. This assessment method enables learners to demonstrate their \
-comprehension of productivity principles, innovation strategies, productivity \
-management frameworks, continuous improvement concepts, and performance \
-measurement systems, which are essential for effective decision-making and \
-implementation in organisational contexts.
+learners' theoretical understanding and applied knowledge of the foundational \
+productivity and innovation concepts covered on the first day. This assessment \
+enables learners to demonstrate their comprehension of productivity principles \
+and continuous improvement concepts, which are essential for effective \
+decision-making in organisational contexts.
 
 A written format is particularly suitable as it allows for structured and \
-objective evaluation of learners' ability to explain concepts, apply recognised \
-productivity and innovation frameworks, and articulate reasoned responses in a \
-professional and systematic manner. This aligns with the knowledge-based \
-learning outcomes of the course and ensures consistency and fairness in \
-assessment across all learners.
+objective evaluation of learners' ability to explain concepts and apply \
+recognised frameworks in a professional and systematic manner. This aligns with \
+the day's knowledge-based learning outcomes and ensures consistency and fairness \
+across all learners.
 
-Respond with ONLY the paragraph text, nothing else."""
+Day 2 Assessment
+• The Written Examination remains appropriate for evaluating learners' \
+understanding and applied knowledge of the more advanced innovation strategies \
+and performance measurement systems covered on the second day. This assessment \
+enables learners to demonstrate their ability to articulate reasoned responses \
+and apply innovation management frameworks to organisational scenarios.
+
+A written format supports structured, objective and fair evaluation of the \
+day's outcomes, allowing learners to systematically explain and apply the \
+concepts. This aligns with the day's knowledge-based learning outcomes and \
+maintains consistency across all learners.
+
+Respond with ONLY the writeup text for all days, nothing else."""
 
 
 MINIMUM_ENTRY_REQUIREMENT_PROMPT_TEMPLATE = """\
@@ -504,13 +629,11 @@ def generate_minimum_entry_requirement(
         )
     else:
         special_req_text = ""
-    return asyncio.run(
-        _generate_async(
-            template,
-            course_title=course_title,
-            course_topics=course_topics,
-            special_requirements=special_req_text,
-        )
+    return _generate(
+        template,
+        course_title=course_title,
+        course_topics=course_topics,
+        special_requirements=special_req_text,
     )
 
 
@@ -559,9 +682,7 @@ def generate_learning_outcomes(
 ) -> str:
     """Generate learning outcomes for each topic using the Claude Agent SDK."""
     template = prompt_template or LEARNING_OUTCOME_PROMPT_TEMPLATE
-    return asyncio.run(
-        _generate_async(template, course_title=course_title, course_topics=course_topics)
-    )
+    return _generate(template, course_title=course_title, course_topics=course_topics)
 
 
 COURSE_TOPICS_PROMPT_TEMPLATE = """\
@@ -664,16 +785,14 @@ def generate_course_topics(
         )
     else:
         special_req_text = ""
-    return asyncio.run(
-        _generate_async(
-            template,
-            course_title=course_title,
-            num_days=str(num_days),
-            max_topics=str(max_topics),
-            skill_context=skill_context,
-            skill_guideline=skill_guideline,
-            special_requirements=special_req_text,
-        )
+    return _generate(
+        template,
+        course_title=course_title,
+        num_days=str(num_days),
+        max_topics=str(max_topics),
+        skill_context=skill_context,
+        skill_guideline=skill_guideline,
+        special_requirements=special_req_text,
     )
 
 
@@ -706,9 +825,7 @@ def generate_job_roles(
 ) -> str:
     """Generate job roles following SSG Skills Jobs portal naming."""
     template = prompt_template or JOB_ROLES_PROMPT_TEMPLATE
-    return asyncio.run(
-        _generate_async(template, course_title=course_title, course_topics=course_topics)
-    )
+    return _generate(template, course_title=course_title, course_topics=course_topics)
 
 
 LESSON_PLAN_PROMPT_TEMPLATE = """\
@@ -872,18 +989,16 @@ def generate_lesson_plan_content(
     """Generate a lesson plan using the Claude Agent SDK."""
     template = prompt_template or LESSON_PLAN_PROMPT_TEMPLATE
     num_days = max(1, course_duration // 8)
-    return asyncio.run(
-        _generate_async(
-            template,
-            course_title=course_title,
-            course_topics=course_topics,
-            course_duration=str(course_duration),
-            num_days=str(num_days),
-            instructional_duration=str(instructional_duration),
-            assessment_duration=str(assessment_duration),
-            instructional_methods=", ".join(instructional_methods),
-            assessment_methods=", ".join(assessment_methods),
-        )
+    return _generate(
+        template,
+        course_title=course_title,
+        course_topics=course_topics,
+        course_duration=str(course_duration),
+        num_days=str(num_days),
+        instructional_duration=str(instructional_duration),
+        assessment_duration=str(assessment_duration),
+        instructional_methods=", ".join(instructional_methods),
+        assessment_methods=", ".join(assessment_methods),
     )
 
 
@@ -1386,16 +1501,26 @@ def generate_instruction_method(
 ) -> str:
     """Generate an appropriateness elaboration for an instructional method."""
     template = prompt_template or INSTRUCTION_METHOD_PROMPT_TEMPLATE
-    return asyncio.run(
-        _generate_async(template, course_title=course_title, course_topics=course_topics, method_name=method_name)
-    )
+    return _generate(template, course_title=course_title, course_topics=course_topics, method_name=method_name)
 
 
 def generate_assessment_method(
-    course_title: str, course_topics: str, method_name: str, prompt_template: str | None = None
+    course_title: str,
+    course_topics: str,
+    method_name: str,
+    prompt_template: str | None = None,
+    num_days: int = 1,
 ) -> str:
-    """Generate an appropriateness elaboration for an assessment method."""
+    """Generate an appropriateness elaboration for an assessment method.
+
+    Produces one assessment writeup per course day, with the topics and learning
+    outcomes distributed sequentially across the days.
+    """
     template = prompt_template or ASSESSMENT_METHOD_PROMPT_TEMPLATE
-    return asyncio.run(
-        _generate_async(template, course_title=course_title, course_topics=course_topics, method_name=method_name)
+    return _generate(
+        template,
+        course_title=course_title,
+        course_topics=course_topics,
+        method_name=method_name,
+        num_days=str(num_days),
     )

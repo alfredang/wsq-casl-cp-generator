@@ -1,7 +1,13 @@
 import html
+import os
 import re
 import tempfile
 from pathlib import Path
+
+# CRITICAL FIX: Unset CLAUDECODE before any other imports
+# This allows the app to use Claude Code even when run from within Claude Code
+if "CLAUDECODE" in os.environ:
+    del os.environ["CLAUDECODE"]
 
 import streamlit as st
 
@@ -1101,7 +1107,8 @@ elif active_page == "Assessment Methods":
     with st.expander("Prompt Template", expanded=False):
         am_prompt = st.text_area(
             "Edit the prompt template used for generation. "
-            "Use `{course_title}`, `{course_topics}`, and `{method_name}` as placeholders.",
+            "Use `{course_title}`, `{course_topics}`, `{method_name}`, and "
+            "`{num_days}` as placeholders.",
             value=st.session_state.get("am_prompt", ASSESSMENT_METHOD_PROMPT_TEMPLATE),
             height=300,
             key="am_prompt_input",
@@ -1129,6 +1136,9 @@ elif active_page == "Assessment Methods":
         if not has_course_details or not saved_am:
             st.warning("Please enter course details and select assessment methods first.")
         else:
+            import math
+            am_total_hours = st.session_state.get("saved_course_duration", 8)
+            am_num_days = max(1, math.ceil(am_total_hours / 8))
             results = {}
             for method in saved_am:
                 with st.spinner(f"Generating for {method}..."):
@@ -1136,6 +1146,7 @@ elif active_page == "Assessment Methods":
                         result = generate_assessment_method(
                             saved_title, saved_topics, method,
                             prompt_template=st.session_state.get("am_prompt"),
+                            num_days=am_num_days,
                         )
                         results[method] = result
                     except Exception as e:
