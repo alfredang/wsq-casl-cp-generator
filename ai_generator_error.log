@@ -1,0 +1,389 @@
+
+
+=== Error at unknown ===
+CLAUDECODE env var: NOT SET
+CLI Path: C:\Users\Tertiary\AppData\Roaming\Claude\claude-code\2.1.40\claude.exe
+Error: Failed to start Claude Code: 
+Full trace:
+Traceback (most recent call last):
+  File "C:\Users\Tertiary\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\claude_agent_sdk\_internal\transport\subprocess_cli.py", line 356, in connect
+    self._process = await anyio.open_process(
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Tertiary\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\anyio\_core\_subprocesses.py", line 190, in open_process
+    return await get_async_backend().open_process(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Tertiary\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\anyio\_backends\_asyncio.py", line 2601, in open_process
+    process = await asyncio.create_subprocess_exec(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\subprocess.py", line 223, in create_subprocess_exec
+    transport, protocol = await loop.subprocess_exec(
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\base_events.py", line 1708, in subprocess_exec
+    transport = await self._make_subprocess_transport(
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\base_events.py", line 503, in _make_subprocess_transport
+    raise NotImplementedError
+NotImplementedError
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\Tertiary\Downloads\wsq-casl-cp-generator-main\wsq-casl-cp-generator-main\app\ai_generator.py", line 145, in _generate
+    result_text = asyncio.run(_generate_async(prompt))
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\runners.py", line 190, in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\base_events.py", line 654, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "C:\Users\Tertiary\Downloads\wsq-casl-cp-generator-main\wsq-casl-cp-generator-main\app\ai_generator.py", line 125, in _generate_async
+    async for message in query(prompt=prompt, options=options):
+  File "C:\Users\Tertiary\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\claude_agent_sdk\query.py", line 123, in query
+    async for message in client.process_query(
+  File "C:\Users\Tertiary\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\claude_agent_sdk\_internal\client.py", line 81, in process_query
+    await chosen_transport.connect()
+  File "C:\Users\Tertiary\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\claude_agent_sdk\_internal\transport\subprocess_cli.py", line 397, in connect
+    raise error from e
+claude_agent_sdk._errors.CLIConnectionError: Failed to start Claude Code: 
+
+
+
+=== Error at unknown ===
+CLAUDECODE env var: NOT SET
+CLI Path: C:\Users\Tertiary\AppData\Local\AnthropicClaude\claude.exe
+Error: Control request timeout: initialize
+Full trace:
+Traceback (most recent call last):
+  File "C:\Users\Tertiary\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\anyio\_core\_tasks.py", line 124, in fail_after
+    yield cancel_scope
+  File "C:\Users\Tertiary\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\claude_agent_sdk\_internal\query.py", line 376, in _send_control_request
+    await event.wait()
+  File "C:\Users\Tertiary\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\anyio\_backends\_asyncio.py", line 1789, in wait
+    await self._event.wait()
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\locks.py", line 213, in wait
+    await fut
+asyncio.exceptions.CancelledError: Cancelled via cancel scope 1e3ec92e150; reason: deadline exceeded
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Tertiary\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\claude_agent_sdk\_internal\query.py", line 375, in _send_control_request
+    with anyio.fail_after(timeout):
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\contextlib.py", line 158, in __exit__
+    self.gen.throw(typ, value, traceback)
+  File "C:\Users\Tertiary\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\anyio\_core\_tasks.py", line 127, in fail_after
+    raise TimeoutError
+TimeoutError
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\Tertiary\Downloads\wsq-casl-cp-generator-main\wsq-casl-cp-generator-main\app\ai_generator.py", line 149, in _generate
+    result_text = asyncio.run(_generate_async(prompt))
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\runners.py", line 190, in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\base_events.py", line 654, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "C:\Users\Tertiary\Downloads\wsq-casl-cp-generator-main\wsq-casl-cp-generator-main\app\ai_generator.py", line 125, in _generate_async
+    async for message in query(prompt=prompt, options=options):
+  File "C:\Users\Tertiary\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\claude_agent_sdk\query.py", line 123, in query
+    async for message in client.process_query(
+  File "C:\Users\Tertiary\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\claude_agent_sdk\_internal\client.py", line 119, in process_query
+    await query.initialize()
+  File "C:\Users\Tertiary\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\claude_agent_sdk\_internal\query.py", line 158, in initialize
+    response = await self._send_control_request(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Tertiary\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\claude_agent_sdk\_internal\query.py", line 389, in _send_control_request
+    raise Exception(f"Control request timeout: {request.get('subtype')}") from e
+Exception: Control request timeout: initialize
+
+
+
+=== Error at unknown ===
+CLAUDECODE env var: NOT SET
+CLI Path: C:\Users\Tertiary\AppData\Local\AnthropicClaude\claude.exe
+Error: Control request timeout: initialize
+Full trace:
+Traceback (most recent call last):
+  File "C:\Users\Tertiary\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\anyio\_core\_tasks.py", line 124, in fail_after
+    yield cancel_scope
+  File "C:\Users\Tertiary\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\claude_agent_sdk\_internal\query.py", line 376, in _send_control_request
+    await event.wait()
+  File "C:\Users\Tertiary\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\anyio\_backends\_asyncio.py", line 1789, in wait
+    await self._event.wait()
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\locks.py", line 213, in wait
+    await fut
+asyncio.exceptions.CancelledError: Cancelled via cancel scope 1e3ec92f050; reason: deadline exceeded
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Tertiary\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\claude_agent_sdk\_internal\query.py", line 375, in _send_control_request
+    with anyio.fail_after(timeout):
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\contextlib.py", line 158, in __exit__
+    self.gen.throw(typ, value, traceback)
+  File "C:\Users\Tertiary\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\anyio\_core\_tasks.py", line 127, in fail_after
+    raise TimeoutError
+TimeoutError
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\Tertiary\Downloads\wsq-casl-cp-generator-main\wsq-casl-cp-generator-main\app\ai_generator.py", line 149, in _generate
+    result_text = asyncio.run(_generate_async(prompt))
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\runners.py", line 190, in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\base_events.py", line 654, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "C:\Users\Tertiary\Downloads\wsq-casl-cp-generator-main\wsq-casl-cp-generator-main\app\ai_generator.py", line 125, in _generate_async
+    async for message in query(prompt=prompt, options=options):
+  File "C:\Users\Tertiary\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\claude_agent_sdk\query.py", line 123, in query
+    async for message in client.process_query(
+  File "C:\Users\Tertiary\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\claude_agent_sdk\_internal\client.py", line 119, in process_query
+    await query.initialize()
+  File "C:\Users\Tertiary\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\claude_agent_sdk\_internal\query.py", line 158, in initialize
+    response = await self._send_control_request(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Tertiary\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\claude_agent_sdk\_internal\query.py", line 389, in _send_control_request
+    raise Exception(f"Control request timeout: {request.get('subtype')}") from e
+Exception: Control request timeout: initialize
+
+
+
+=== Error at unknown ===
+CLAUDECODE env var: NOT SET
+CLI Path: C:\Users\Tertiary\AppData\Roaming\Claude\claude-code\2.1.111\claude.exe
+Error: Unknown message type: rate_limit_event
+Full trace:
+Traceback (most recent call last):
+  File "C:\Users\Tertiary\Downloads\wsq-casl-cp-generator-main\wsq-casl-cp-generator-main\app\ai_generator.py", line 166, in _generate
+    result_text = asyncio.run(_generate_async(prompt))
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\runners.py", line 190, in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\base_events.py", line 654, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "C:\Users\Tertiary\Downloads\wsq-casl-cp-generator-main\wsq-casl-cp-generator-main\app\ai_generator.py", line 142, in _generate_async
+    async for message in query(prompt=prompt, options=options):
+  File "C:\Users\Tertiary\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\claude_agent_sdk\query.py", line 123, in query
+    async for message in client.process_query(
+  File "C:\Users\Tertiary\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\claude_agent_sdk\_internal\client.py", line 141, in process_query
+    yield parse_message(data)
+          ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Tertiary\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\claude_agent_sdk\_internal\message_parser.py", line 180, in parse_message
+    raise MessageParseError(f"Unknown message type: {message_type}", data)
+claude_agent_sdk._errors.MessageParseError: Unknown message type: rate_limit_event
+
+
+
+=== Error at unknown ===
+CLAUDECODE env var: NOT SET
+CLI Path: C:\Users\Tertiary\AppData\Roaming\Claude\claude-code\2.1.111\claude.exe
+Error: Unknown message type: rate_limit_event
+Full trace:
+Traceback (most recent call last):
+  File "C:\Users\Tertiary\Downloads\wsq-casl-cp-generator-main\wsq-casl-cp-generator-main\app\ai_generator.py", line 166, in _generate
+    result_text = asyncio.run(_generate_async(prompt))
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\runners.py", line 190, in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\base_events.py", line 654, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "C:\Users\Tertiary\Downloads\wsq-casl-cp-generator-main\wsq-casl-cp-generator-main\app\ai_generator.py", line 142, in _generate_async
+    async for message in query(prompt=prompt, options=options):
+  File "C:\Users\Tertiary\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\claude_agent_sdk\query.py", line 123, in query
+    async for message in client.process_query(
+  File "C:\Users\Tertiary\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\claude_agent_sdk\_internal\client.py", line 141, in process_query
+    yield parse_message(data)
+          ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Tertiary\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\claude_agent_sdk\_internal\message_parser.py", line 180, in parse_message
+    raise MessageParseError(f"Unknown message type: {message_type}", data)
+claude_agent_sdk._errors.MessageParseError: Unknown message type: rate_limit_event
+
+
+
+=== Error at unknown ===
+CLAUDECODE env var: NOT SET
+CLI Path: C:\Users\Tertiary\AppData\Roaming\Claude\claude-code\2.1.111\claude.exe
+Error: Unknown message type: rate_limit_event
+Full trace:
+Traceback (most recent call last):
+  File "C:\Users\Tertiary\Downloads\wsq-casl-cp-generator-main\wsq-casl-cp-generator-main\app\ai_generator.py", line 166, in _generate
+    result_text = asyncio.run(_generate_async(prompt))
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\runners.py", line 190, in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\base_events.py", line 654, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "C:\Users\Tertiary\Downloads\wsq-casl-cp-generator-main\wsq-casl-cp-generator-main\app\ai_generator.py", line 142, in _generate_async
+    async for message in query(prompt=prompt, options=options):
+  File "C:\Users\Tertiary\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\claude_agent_sdk\query.py", line 123, in query
+    async for message in client.process_query(
+  File "C:\Users\Tertiary\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\claude_agent_sdk\_internal\client.py", line 141, in process_query
+    yield parse_message(data)
+          ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Tertiary\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\claude_agent_sdk\_internal\message_parser.py", line 180, in parse_message
+    raise MessageParseError(f"Unknown message type: {message_type}", data)
+claude_agent_sdk._errors.MessageParseError: Unknown message type: rate_limit_event
+
+
+
+=== Error at unknown ===
+CLAUDECODE env var: NOT SET
+CLI Path: C:\Users\Tertiary\AppData\Roaming\Claude\claude-code\2.1.111\claude.exe
+Error: Claude Code not found at: C:\Users\Tertiary\AppData\Roaming\Claude\claude-code\2.1.111\claude.exe
+Full trace:
+Traceback (most recent call last):
+  File "C:\Users\Tertiary\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\claude_agent_sdk\_internal\transport\subprocess_cli.py", line 448, in connect
+    self._process = await anyio.open_process(
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Tertiary\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\anyio\_core\_subprocesses.py", line 190, in open_process
+    return await get_async_backend().open_process(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Tertiary\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\anyio\_backends\_asyncio.py", line 2601, in open_process
+    process = await asyncio.create_subprocess_exec(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\subprocess.py", line 223, in create_subprocess_exec
+    transport, protocol = await loop.subprocess_exec(
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\base_events.py", line 1708, in subprocess_exec
+    transport = await self._make_subprocess_transport(
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\windows_events.py", line 399, in _make_subprocess_transport
+    transp = _WindowsSubprocessTransport(self, protocol, args, shell,
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\base_subprocess.py", line 36, in __init__
+    self._start(args=args, shell=shell, stdin=stdin, stdout=stdout,
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\windows_events.py", line 929, in _start
+    self._proc = windows_utils.Popen(
+                 ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\windows_utils.py", line 153, in __init__
+    super().__init__(args, stdin=stdin_rfd, stdout=stdout_wfd,
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\subprocess.py", line 1026, in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\subprocess.py", line 1538, in _execute_child
+    hp, ht, pid, tid = _winapi.CreateProcess(executable, args,
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [WinError 2] The system cannot find the file specified
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\Tertiary\Downloads\wsq-casl-cp-generator-main\wsq-casl-cp-generator-main\app\ai_generator.py", line 166, in _generate
+    result_text = asyncio.run(_generate_async(prompt))
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\runners.py", line 190, in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\base_events.py", line 654, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "C:\Users\Tertiary\Downloads\wsq-casl-cp-generator-main\wsq-casl-cp-generator-main\app\ai_generator.py", line 142, in _generate_async
+    async for message in query(prompt=prompt, options=options):
+  File "C:\Users\Tertiary\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\claude_agent_sdk\query.py", line 123, in query
+    async for message in client.process_query(
+  File "C:\Users\Tertiary\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\claude_agent_sdk\_internal\client.py", line 83, in process_query
+    await chosen_transport.connect()
+  File "C:\Users\Tertiary\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\claude_agent_sdk\_internal\transport\subprocess_cli.py", line 485, in connect
+    raise error from e
+claude_agent_sdk._errors.CLINotFoundError: Claude Code not found at: C:\Users\Tertiary\AppData\Roaming\Claude\claude-code\2.1.111\claude.exe
+
+
+
+=== Error at unknown ===
+CLAUDECODE env var: NOT SET
+CLI Path: C:\Users\Tertiary\AppData\Roaming\Claude\claude-code\2.1.111\claude.exe
+Error: Claude Code not found at: C:\Users\Tertiary\AppData\Roaming\Claude\claude-code\2.1.111\claude.exe
+Full trace:
+Traceback (most recent call last):
+  File "C:\Users\Tertiary\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\claude_agent_sdk\_internal\transport\subprocess_cli.py", line 448, in connect
+    self._process = await anyio.open_process(
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Tertiary\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\anyio\_core\_subprocesses.py", line 190, in open_process
+    return await get_async_backend().open_process(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Tertiary\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\anyio\_backends\_asyncio.py", line 2601, in open_process
+    process = await asyncio.create_subprocess_exec(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\subprocess.py", line 223, in create_subprocess_exec
+    transport, protocol = await loop.subprocess_exec(
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\base_events.py", line 1708, in subprocess_exec
+    transport = await self._make_subprocess_transport(
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\windows_events.py", line 399, in _make_subprocess_transport
+    transp = _WindowsSubprocessTransport(self, protocol, args, shell,
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\base_subprocess.py", line 36, in __init__
+    self._start(args=args, shell=shell, stdin=stdin, stdout=stdout,
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\windows_events.py", line 929, in _start
+    self._proc = windows_utils.Popen(
+                 ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\windows_utils.py", line 153, in __init__
+    super().__init__(args, stdin=stdin_rfd, stdout=stdout_wfd,
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\subprocess.py", line 1026, in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\subprocess.py", line 1538, in _execute_child
+    hp, ht, pid, tid = _winapi.CreateProcess(executable, args,
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [WinError 2] The system cannot find the file specified
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\Tertiary\Downloads\wsq-casl-cp-generator-main\wsq-casl-cp-generator-main\app\ai_generator.py", line 166, in _generate
+    result_text = asyncio.run(_generate_async(prompt))
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\runners.py", line 190, in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\base_events.py", line 654, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "C:\Users\Tertiary\Downloads\wsq-casl-cp-generator-main\wsq-casl-cp-generator-main\app\ai_generator.py", line 142, in _generate_async
+    async for message in query(prompt=prompt, options=options):
+  File "C:\Users\Tertiary\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\claude_agent_sdk\query.py", line 123, in query
+    async for message in client.process_query(
+  File "C:\Users\Tertiary\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\claude_agent_sdk\_internal\client.py", line 83, in process_query
+    await chosen_transport.connect()
+  File "C:\Users\Tertiary\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\claude_agent_sdk\_internal\transport\subprocess_cli.py", line 485, in connect
+    raise error from e
+claude_agent_sdk._errors.CLINotFoundError: Claude Code not found at: C:\Users\Tertiary\AppData\Roaming\Claude\claude-code\2.1.111\claude.exe
+

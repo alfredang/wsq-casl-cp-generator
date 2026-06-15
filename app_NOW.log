@@ -1,0 +1,22 @@
+
+  You can now view your Streamlit app in your browser.
+
+  Local URL: http://localhost:10000
+  Network URL: http://192.168.3.211:10000
+  External URL: http://118.189.22.142:10000
+
+2026-02-20 14:22:03.588 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-02-20 15:15:16.985 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-02-20 15:17:03.033 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
